@@ -1,0 +1,16 @@
+AUTORIZAIA — CORREÇÃO MOBILE
+
+Substitua somente os arquivos index.html e familia.html da RAIZ do repositório GitHub.
+Não apague a pasta AutorizaIA.
+
+A correção adiciona:
+- largura máxima de 100% para cards e painéis;
+- grids em uma coluna no celular;
+- modais e cards de informação dentro da viewport;
+- relatório semanal responsivo;
+- tabelas com rolagem horizontal controlada;
+- barra de navegação inferior rolável;
+- textos e nomes longos com quebra segura;
+- formulário da família adaptado a telas estreitas.
+
+Os webhooks do n8n continuam apontando para a mesma instância usada na demonstração.

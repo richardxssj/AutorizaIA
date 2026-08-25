@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>AutorizaIA</title>
   <style>
     html,body{margin:0;min-height:100%;background:#071019;color:#eaf2f6;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
@@ -11,12 +11,7 @@
   </style>
 </head>
 <body>
-  <div class="loading">
-    <div>
-      <b>AutorizaIA</b>
-      <p>Carregando sistema...</p>
-    </div>
-  </div>
+  <div class="loading"><div><b>AutorizaIA</b><p>Carregando sistema...</p></div></div>
 
   <script>
   (async () => {
@@ -24,21 +19,315 @@
       const response = await fetch("./AutorizaIA/frontend/index.html", { cache: "no-store" });
       if (!response.ok) throw new Error("Não foi possível carregar o frontend.");
       let html = await response.text();
-
-      // Ativa os webhooks da instância n8n usada na demonstração.
       html = html.replaceAll("SEU_SUBDOMINIO", "richardxssj");
 
+      const mobileFix = String.raw`<style id="autorizaia-mobile-fix">
+/* =========================================================
+   AUTORIZAIA — CORREÇÃO RESPONSIVA PARA CELULAR
+   Mantém todo o conteúdo acessível sem cards escapando da tela.
+   ========================================================= */
+html,body{max-width:100%;}
+img,svg,canvas{max-width:100%;}
+
+@media (max-width: 700px){
+  html,body{
+    width:100% !important;
+    max-width:100% !important;
+    overflow-x:hidden !important;
+  }
+
+  *,*::before,*::after{box-sizing:border-box;min-width:0;}
+
+  .app{
+    display:block !important;
+    width:100% !important;
+    max-width:100% !important;
+  }
+
+  .main{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    padding:16px 12px 100px !important;
+    overflow-x:hidden !important;
+  }
+
+  .view,.view.active,.card,.section,
+  .dashboard-panel,.dash-stat,.week-chart-card,.week-summary-card,
+  .requests-summary-card,.requests-filter-card,
+  .auth-receipt,.student-profile-card,.insight-card,.chart-stat,
+  .presentation-main,.presentation-side,.presentation-mini,
+  .activity-detail-item,.request-proof-card,.request-decision-copy{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+  }
+
+  .cards,
+  .dashboard-hero-grid,
+  .dashboard-main-grid,
+  .analytics-grid,
+  .insight-grid,
+  .week-chart-wrap,
+  .presentation-brief,
+  .presentation-side,
+  .presentation-strip,
+  .form-grid,
+  .history-search,
+  .today-toolbar,
+  .auth-receipt__grid,
+  .student-profile-stats,
+  #requests .requests-toolbar,
+  #requests .requests-filter-card,
+  .activity-detail-grid,
+  .request-detail-grid,
+  .confirm-grid{
+    grid-template-columns:minmax(0,1fr) !important;
+    width:100% !important;
+    max-width:100% !important;
+  }
+
+  .week-summary-card .presentation-brief,
+  .week-summary-card .presentation-side{
+    grid-template-columns:minmax(0,1fr) !important;
+  }
+
+  .topbar,
+  .section-head,
+  .dashboard-panel-head,
+  .week-toolbar,
+  .auth-receipt__head,
+  .auth-receipt__foot,
+  .activity-detail-head,
+  .request-detail-head,
+  .student-profile-head,
+  .student-profile-actions{
+    width:100% !important;
+    max-width:100% !important;
+    flex-wrap:wrap !important;
+    align-items:flex-start !important;
+  }
+
+  .topbar-search{
+    order:3 !important;
+    width:100% !important;
+    max-width:100% !important;
+    margin-left:0 !important;
+  }
+
+  .topbar h1,.topbar p,
+  .activity-person b,.request-person b,
+  .activity-detail-person h3,.request-detail-person h2,
+  .activity-detail-item strong,.request-detail-grid .activity-detail-item strong,
+  .history-field strong,.chart-stat strong,.insight-card strong,
+  .presentation-main h3,.presentation-note,.student-stat strong{
+    max-width:100% !important;
+    overflow-wrap:anywhere !important;
+    word-break:normal !important;
+  }
+
+  .dashboard-activity-row,
+  #requests .request-row{
+    width:100% !important;
+    max-width:100% !important;
+    grid-template-columns:minmax(0,1fr) auto !important;
+    gap:10px !important;
+  }
+
+  .dashboard-activity-row .activity-cell,
+  .dashboard-activity-row .activity-reason,
+  #requests .request-row .request-cell,
+  #requests .request-row .request-reason,
+  #requests .request-row .request-proof-tag{
+    display:none !important;
+  }
+
+  .today-table-wrap,
+  .wr-students-table-wrap,
+  [class*="table-wrap"]{
+    width:100% !important;
+    max-width:100% !important;
+    overflow-x:auto !important;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  .today-table{
+    min-width:760px !important;
+  }
+
+  .week-chart{
+    width:100% !important;
+    max-width:100% !important;
+    overflow-x:auto !important;
+    -webkit-overflow-scrolling:touch;
+    padding-left:2px !important;
+    padding-right:2px !important;
+  }
+
+  .week-chart-summary{
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr) !important;
+    width:100% !important;
+  }
+
+  /* Modais e cards de informação: nunca ficam cortados fora da viewport */
+  .activity-detail-overlay,
+  .request-detail-overlay,
+  .student-profile-overlay,
+  .confirm-box,
+  .weekly-report-overlay{
+    padding:10px !important;
+    align-items:flex-start !important;
+    justify-content:center !important;
+    overflow-x:hidden !important;
+    overflow-y:auto !important;
+  }
+
+  .activity-detail-card,
+  .request-detail-card,
+  .student-profile-card,
+  .confirm-card,
+  .recent-cancel-card,
+  .weekly-report-shell{
+    width:calc(100vw - 20px) !important;
+    max-width:calc(100vw - 20px) !important;
+    min-width:0 !important;
+    max-height:none !important;
+    margin:8px auto 22px !important;
+  }
+
+  .activity-detail-card,
+  .request-detail-card,
+  .student-profile-card,
+  .confirm-card,
+  .recent-cancel-card{
+    overflow:visible !important;
+  }
+
+  .activity-detail-grid,
+  .request-detail-grid{
+    padding:14px !important;
+  }
+
+  .activity-detail-item,
+  .request-detail-grid .activity-detail-item,
+  .confirm-item,
+  .student-stat,
+  .chart-stat,
+  .insight-card{
+    grid-column:auto !important;
+    width:100% !important;
+    max-width:100% !important;
+  }
+
+  .activity-detail-status{display:none !important;}
+
+  .activity-detail-qr-wrap{
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr) !important;
+    width:100% !important;
+  }
+
+  /* Relatório semanal */
+  .weekly-report-toolbar{
+    width:100% !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:12px !important;
+  }
+  .weekly-report-toolbar>div:last-child{
+    width:100% !important;
+    flex-wrap:wrap !important;
+  }
+  .weekly-report-toolbar .mini-btn{
+    flex:1 1 180px !important;
+  }
+  .weekly-report-paper{
+    width:100% !important;
+    max-width:100% !important;
+    padding:20px 14px !important;
+    overflow:hidden !important;
+  }
+  .wr-head,.wr-intro,.wr-footer{
+    flex-direction:column !important;
+    align-items:flex-start !important;
+    gap:12px !important;
+  }
+  .wr-period,.wr-total{text-align:left !important;}
+  .wr-metrics{grid-template-columns:minmax(0,1fr) !important;}
+  .wr-section{padding:15px !important;}
+  .wr-section-head{
+    flex-direction:column !important;
+    align-items:flex-start !important;
+    gap:8px !important;
+  }
+  .wr-rank{
+    grid-template-columns:30px minmax(0,1fr) 34px !important;
+    gap:9px !important;
+  }
+  .wr-rank .wr-track{display:none !important;}
+  .wr-intro h2{font-size:26px !important;line-height:1.08 !important;}
+  .wr-total b{font-size:42px !important;}
+
+  /* Navegação inferior: todos os itens continuam acessíveis */
+  .sidebar{
+    width:100% !important;
+    max-width:100% !important;
+    left:0 !important;
+    right:0 !important;
+    overflow:hidden !important;
+  }
+  .nav{
+    width:100% !important;
+    max-width:100% !important;
+    overflow-x:auto !important;
+    overflow-y:hidden !important;
+    flex-wrap:nowrap !important;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+  }
+  .nav::-webkit-scrollbar{display:none;}
+  .nav button{
+    flex:0 0 auto !important;
+    min-width:62px !important;
+    padding:10px 11px !important;
+  }
+
+  input,textarea,select,button{
+    max-width:100% !important;
+  }
+}
+
+@media (max-width: 480px){
+  .main{padding:14px 10px 98px !important;}
+  .section{padding:15px !important;}
+  .metric,.dash-stat{padding:17px !important;min-height:0 !important;}
+  .card{border-radius:16px !important;}
+  .topbar{gap:12px !important;margin-bottom:18px !important;}
+  .topbar h1{font-size:22px !important;}
+  .metric strong,.dash-stat strong{font-size:28px !important;}
+  .actions,.request-decision-actions,.student-profile-actions{
+    flex-direction:column !important;
+    width:100% !important;
+  }
+  .actions .btn,.request-decision-btn,.student-profile-actions .btn,.test-data-btn{
+    width:100% !important;
+  }
+  .toast-stack{
+    left:10px !important;
+    right:10px !important;
+    width:auto !important;
+    max-width:none !important;
+  }
+}
+</style>`;
+
+      html = html.replace(/<\/head>/i, mobileFix + "</head>");
       document.open();
       document.write(html);
       document.close();
     } catch (error) {
-      document.body.innerHTML = `
-        <div class="loading">
-          <div>
-            <b>AutorizaIA</b>
-            <p>Não foi possível carregar a demonstração.</p>
-          </div>
-        </div>`;
+      document.body.innerHTML = '<div class="loading"><div><b>AutorizaIA</b><p>Não foi possível carregar a demonstração.</p></div></div>';
       console.error(error);
     }
   })();
