@@ -1,0 +1,540 @@
+{
+  "name": "AutorizaIA • 02 • Solicitações Família",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "autorizaia-solicitacao",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "96054b9f-abff-423f-833e-cd9d8c9270ed",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first();\nconst body = input.json.body || input.json;\n\nconst agora = new Date();\n\nconst formatarDataHora = (data) => {\n  return data.toLocaleString('pt-BR', {\n    timeZone: 'America/Recife'\n  });\n};\n\nconst criarId = () => {\n  const d = new Date();\n\n  const data = d.toLocaleDateString('pt-BR', {\n    timeZone: 'America/Recife'\n  }).replace(/\\//g, '');\n\n  const hora = d.toLocaleTimeString('pt-BR', {\n    timeZone: 'America/Recife',\n    hour: '2-digit',\n    minute: '2-digit'\n  }).replace(':', '');\n\n  const aleatorio = Math.random()\n    .toString(36)\n    .substring(2, 6)\n    .toUpperCase();\n\n  return `SOL-${data}-${hora}-${aleatorio}`;\n};\n\nreturn [{\n  json: {\n    id_solicitacao: criarId(),\n    nome_aluno: body.nome_aluno || '',\n    turma: body.turma || '',\n    data_saida: body.data_saida || '',\n    horario_saida: body.horario_saida || '',\n    responsavel: body.responsavel || '',\n    telefone: body.telefone || '',\n    motivo: body.motivo || 'Pessoal',\n    comprovante: '',\n    status: 'PENDENTE',\n    data_solicitacao: formatarDataHora(agora),\n    data_decisao: '',\n    observacao_escola: ''\n  },\n\n  binary: input.binary\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        0
+      ],
+      "id": "28a6b376-eab8-488a-82c7-07d1cff1f454",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "SEU_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "AutorizaIA - Registro de Saídas"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1600149817,
+          "mode": "list",
+          "cachedResultName": "Solicitações"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id_solicitacao": "={{ $('Code in JavaScript').first().json.id_solicitacao }}",
+            "nome_aluno": "={{ $('Code in JavaScript').first().json.nome_aluno }}",
+            "turma": "={{ $('Code in JavaScript').first().json.turma }}",
+            "data_saida": "={{ $('Code in JavaScript').first().json.data_saida }}",
+            "horario_saida": "={{ $('Code in JavaScript').first().json.horario_saida }}",
+            "responsavel": "={{ $('Code in JavaScript').first().json.responsavel }}",
+            "telefone": "={{ $('Code in JavaScript').first().json.telefone }}",
+            "motivo": "={{ $('Code in JavaScript').first().json.motivo }}",
+            "comprovante": "={{ 'https://drive.google.com/file/d/' + $('Upload file').first().json.id + '/view' }}",
+            "status": "={{ $('Code in JavaScript').first().json.status }}",
+            "data_solicitacao": "={{ $('Code in JavaScript').first().json.data_solicitacao }}",
+            "data_decisao": "={{ $('Code in JavaScript').first().json.data_decisao }}",
+            "observacao_escola": "={{ $('Code in JavaScript').first().json.observacao_escola }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "id_solicitacao",
+              "displayName": "id_solicitacao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nome_aluno",
+              "displayName": "nome_aluno",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "turma",
+              "displayName": "turma",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "data_saida",
+              "displayName": "data_saida",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "horario_saida",
+              "displayName": "horario_saida",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "responsavel",
+              "displayName": "responsavel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "telefone",
+              "displayName": "telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "motivo",
+              "displayName": "motivo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "comprovante",
+              "displayName": "comprovante",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "data_solicitacao",
+              "displayName": "data_solicitacao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "data_decisao",
+              "displayName": "data_decisao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "observacao_escola",
+              "displayName": "observacao_escola",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        880,
+        -160
+      ],
+      "id": "c744b530-fd21-4e48-8b00-38be0fe0004e",
+      "name": "Append row in sheet",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1104,
+        -64
+      ],
+      "id": "f23c4553-33d5-4a0e-80da-7f37b3df9c21",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "comprovante",
+        "name": "={{ $binary.comprovante.fileName }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "SEU_GOOGLE_DRIVE_FOLDER_ID",
+          "mode": "list",
+          "cachedResultName": "AutorizaIA - Comprovantes"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        656,
+        -160
+      ],
+      "id": "3c585c0d-90f9-4ba0-811b-2a1e43df0e6e",
+      "name": "Upload file",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2aedb1d2-da39-43a0-b638-7d848c85e5a7",
+              "leftValue": "={{ !!$binary?.comprovante }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        368,
+        -32
+      ],
+      "id": "55e658b5-fb77-43f6-ab56-d4b4aef19985",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "SEU_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "AutorizaIA - Registro de Saídas"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1600149817,
+          "mode": "list",
+          "cachedResultName": "Solicitações"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id_solicitacao": "={{ $('Code in JavaScript').first().json.id_solicitacao }}",
+            "nome_aluno": "={{ $('Code in JavaScript').first().json.nome_aluno }}",
+            "turma": "={{ $('Code in JavaScript').first().json.turma }}",
+            "data_saida": "={{ $('Code in JavaScript').first().json.data_saida }}",
+            "horario_saida": "={{ $('Code in JavaScript').first().json.horario_saida }}",
+            "responsavel": "={{ $('Code in JavaScript').first().json.responsavel }}",
+            "telefone": "={{ $('Code in JavaScript').first().json.telefone }}",
+            "motivo": "={{ $('Code in JavaScript').first().json.motivo }}",
+            "comprovante": "=",
+            "status": "={{ $('Code in JavaScript').first().json.status }}",
+            "data_solicitacao": "={{ $('Code in JavaScript').first().json.data_solicitacao }}",
+            "data_decisao": "={{ $('Code in JavaScript').first().json.data_decisao }}",
+            "observacao_escola": "={{ $('Code in JavaScript').first().json.observacao_escola }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "id_solicitacao",
+              "displayName": "id_solicitacao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nome_aluno",
+              "displayName": "nome_aluno",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "turma",
+              "displayName": "turma",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "data_saida",
+              "displayName": "data_saida",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "horario_saida",
+              "displayName": "horario_saida",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "responsavel",
+              "displayName": "responsavel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "telefone",
+              "displayName": "telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "motivo",
+              "displayName": "motivo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "comprovante",
+              "displayName": "comprovante",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "data_solicitacao",
+              "displayName": "data_solicitacao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "data_decisao",
+              "displayName": "data_decisao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "observacao_escola",
+              "displayName": "observacao_escola",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        656,
+        32
+      ],
+      "id": "2160f8f3-80f0-41c7-9af1-c0f51e1d8345",
+      "name": "Append row in sheet1",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload file": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}

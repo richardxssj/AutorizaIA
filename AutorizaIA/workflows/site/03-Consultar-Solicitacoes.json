@@ -1,0 +1,127 @@
+{
+  "name": "AutorizaIA • 03 • Consultar Solicitações",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "autorizaia-solicitacoes",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "70894714-8bd4-40ce-8a4e-d85c4d6b1e01",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "SEU_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "AutorizaIA - Registro de Saídas"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1600149817,
+          "mode": "list",
+          "cachedResultName": "Solicitações"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        0
+      ],
+      "id": "764ed964-7f5a-4500-aeb5-c8e128f3d5b9",
+      "name": "Get row(s) in sheet",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "jsCode": "const itens = $input.all();\n\nconst pendentes = itens\n  .map(item => item.json)\n  .filter(item =>\n    String(item.status || '')\n      .trim()\n      .toUpperCase() === 'PENDENTE'\n  );\n\nreturn [{\n  json: {\n    total: pendentes.length,\n    solicitacoes: pendentes\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "4251e163-9614-46de-acde-4471f4d72ba3",
+      "name": "Filtrar Solicitações Pendentes"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        672,
+        0
+      ],
+      "id": "19f4eb4d-6c9b-47d2-8746-fa2ba7276f4a",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Filtrar Solicitações Pendentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar Solicitações Pendentes": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}

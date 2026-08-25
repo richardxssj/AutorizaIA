@@ -1,0 +1,129 @@
+{
+  "name": "AutorizaIA • 06 • Saídas de Hoje",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "autorizaia-saidas-hoje",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d3a39b51-711e-42f1-a138-261e8440b250",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "SEU_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "AutorizaIA - Registro de Saídas"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        0
+      ],
+      "id": "8b3799d8-69b7-4deb-9ce0-70f15302192e",
+      "name": "Get row(s) in sheet",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "jsCode": "const registros = $input.all();\n\n// Data atual no horário de Recife\nconst hoje = new Date().toLocaleDateString(\"pt-BR\", {\n  timeZone: \"America/Recife\"\n});\n\n// Filtra apenas os registros cuja data_saida seja hoje\nconst encontrados = registros.filter(item => {\n  const data = String(item.json.data_saida || \"\").trim();\n  return data === hoje;\n});\n\n// Ordena pelo horário, do mais recente para o mais antigo\nencontrados.sort((a, b) => {\n  const horaA = String(a.json.horario_saida || \"00:00\");\n  const horaB = String(b.json.horario_saida || \"00:00\");\n  return horaB.localeCompare(horaA);\n});\n\n// Se não houver registros hoje\nif (!encontrados.length) {\n  return [{\n    json: {\n      data: hoje,\n      total: 0,\n      registros: []\n    }\n  }];\n}\n\n// Retorna tudo em um único item\nreturn [{\n  json: {\n    data: hoje,\n    total: encontrados.length,\n    registros: encontrados.map(item => ({\n      nome_aluno: item.json.nome_aluno,\n      turma: item.json.turma,\n      responsavel: item.json.responsavel,\n      data_saida: item.json.data_saida,\n      horario_saida: item.json.horario_saida,\n      motivo: item.json.motivo,\n      status: item.json.status,\n      data_registro: item.json.data_registro\n    }))\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "c98478fb-2794-4ddc-b9af-86d809dd0023",
+      "name": "Filtrar Saídas de Hoje"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $('Filtrar Saídas de Hoje').first().json }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        672,
+        0
+      ],
+      "id": "d91b0f95-0e97-4b9f-950c-bc6a4fd7a88a",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Filtrar Saídas de Hoje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar Saídas de Hoje": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}

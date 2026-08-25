@@ -1,0 +1,129 @@
+{
+  "name": "AutorizaIA • 05 • Dashboard",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "autorizaia-dashboard",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "2509f54a-6f49-4e39-822c-63a2d03915b2",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "SEU_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "AutorizaIA - Registro de Saídas"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        0
+      ],
+      "id": "0b8ad66d-13d3-4bb5-aa50-b0bd03f5914f",
+      "name": "Get row(s) in sheet",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "jsCode": "const registros = $input.all().map(item => item.json);\n\n// ===============================\n// FUNÇÕES AUXILIARES\n// ===============================\n\nfunction converterData(data) {\n  if (!data) return null;\n\n  const [dia, mes, ano] = String(data).split(\"/\");\n\n  if (!dia || !mes || !ano) return null;\n\n  return new Date(\n    Number(ano),\n    Number(mes) - 1,\n    Number(dia)\n  );\n}\n\nfunction normalizar(v) {\n  return String(v || \"\").trim();\n}\n\nfunction chave(v) {\n  return normalizar(v)\n    .normalize(\"NFD\")\n    .replace(/[\\u0300-\\u036f]/g, \"\")\n    .toLowerCase();\n}\n\nfunction tituloNome(v) {\n  const particulas = new Set([\"da\",\"de\",\"do\",\"das\",\"dos\",\"e\"]);\n  return normalizar(v).toLowerCase().split(/\\s+/).map((p,i) =>\n    i > 0 && particulas.has(p) ? p : p.charAt(0).toUpperCase() + p.slice(1)\n  ).join(\" \");\n}\n\nfunction tituloMotivo(v) {\n  const t = normalizar(v);\n  return t ? t.charAt(0).toUpperCase() + t.slice(1).toLowerCase() : \"\";\n}\n\n// ===============================\n// DATA ATUAL\n// ===============================\n\nconst agora = new Date();\n\nconst hoje = agora.toLocaleDateString(\"pt-BR\", {\n  timeZone: \"America/Recife\"\n});\n\nconst inicioSemana = new Date();\ninicioSemana.setHours(0, 0, 0, 0);\ninicioSemana.setDate(inicioSemana.getDate() - 6);\n\n// ===============================\n// TOTAL GERAL\n// ===============================\n\nconst total = registros.length;\n\n// ===============================\n// REGISTROS DE HOJE\n// ===============================\n\nconst registrosHoje = registros.filter(r =>\n  normalizar(r.data_saida) === hoje\n);\n\nconst totalHoje = registrosHoje.length;\n\n// ===============================\n// REGISTROS DOS ÚLTIMOS 7 DIAS\n// ===============================\n\nconst registrosSemana = registros.filter(r => {\n  const data = converterData(r.data_saida);\n\n  if (!data) return false;\n\n  data.setHours(0, 0, 0, 0);\n\n  return data >= inicioSemana && data <= agora;\n});\n\nconst totalSemana = registrosSemana.length;\n\n// ===============================\n// RANKING DE TURMAS\n// ===============================\n\nconst contagemTurmas = {};\n\nregistrosSemana.forEach(r => {\n  const turma = normalizar(r.turma) || \"Não informado\";\n\n  contagemTurmas[turma] =\n    (contagemTurmas[turma] || 0) + 1;\n});\n\nconst porTurma = Object.entries(contagemTurmas)\n  .map(([turma, total]) => ({\n    turma,\n    total\n  }))\n  .sort((a, b) => b.total - a.total);\n\nconst turmaMaisSaidas =\n  porTurma[0]?.turma || \"Nenhuma\";\n\n// ===============================\n// RANKING DE ALUNOS\n// ===============================\n\nconst alunos = {};\n\nregistrosSemana.forEach(r => {\n  const nomeOriginal = normalizar(r.nome_aluno);\n  const id = chave(nomeOriginal);\n\n  if (!id) return;\n\n  if (!alunos[id]) {\n    alunos[id] = {\n      nome_aluno: tituloNome(nomeOriginal),\n      total: 0,\n      turma: normalizar(r.turma).toUpperCase()\n    };\n  }\n\n  alunos[id].total++;\n});\n\nconst rankingAlunos = Object.values(alunos)\n  .map(dados => ({\n    nome_aluno: dados.nome_aluno,\n    turma: dados.turma || \"Não informado\",\n    total: dados.total\n  }))\n  .sort((a, b) => b.total - a.total);\n\n// ===============================\n// MOTIVOS MAIS FREQUENTES\n// ===============================\n\nconst contagemMotivos = {};\n\nregistrosSemana.forEach(r => {\n  const original = normalizar(r.motivo) || \"Não informado\";\n  const id = chave(original) || \"nao informado\";\n\n  if (!contagemMotivos[id]) {\n    contagemMotivos[id] = {\n      motivo: original === \"Não informado\" ? original : tituloMotivo(original),\n      total: 0\n    };\n  }\n\n  contagemMotivos[id].total++;\n});\n\nconst motivos = Object.values(contagemMotivos)\n  .sort((a, b) => b.total - a.total);\n\n// ===============================\n// DIA MAIS MOVIMENTADO\n// ===============================\n\nconst contagemDias = {};\n\nregistrosSemana.forEach(r => {\n  const data = normalizar(r.data_saida);\n\n  if (!data) return;\n\n  contagemDias[data] =\n    (contagemDias[data] || 0) + 1;\n});\n\nconst porDia = Object.entries(contagemDias)\n  .map(([data, total]) => ({\n    data,\n    total\n  }))\n  .sort((a, b) => b.total - a.total);\n\n// ===============================\n// HORÁRIO DE PICO\n// ===============================\n\nconst contagemHoras = {};\n\nregistrosSemana.forEach(r => {\n  const horario = normalizar(r.horario_saida);\n\n  if (!horario) return;\n\n  const hora = Number(horario.split(\":\")[0]);\n\n  if (Number.isNaN(hora)) return;\n\n  const inicio = String(hora).padStart(2, \"0\");\n  const fim = String((hora + 1) % 24).padStart(2, \"0\");\n\n  const faixa = `${inicio}h–${fim}h`;\n\n  contagemHoras[faixa] =\n    (contagemHoras[faixa] || 0) + 1;\n});\n\nconst porHora = Object.entries(contagemHoras)\n  .map(([faixa, total]) => ({\n    faixa,\n    total\n  }))\n  .sort((a, b) => b.total - a.total);\n\n// ===============================\n// REGISTROS RECENTES\n// ===============================\n\nconst recentes = [...registros]\n  .sort((a, b) => {\n    const dataA = converterData(a.data_saida);\n    const dataB = converterData(b.data_saida);\n\n    if (!dataA || !dataB) return 0;\n\n    const horaA =\n      String(a.horario_saida || \"00:00\")\n        .split(\":\");\n\n    const horaB =\n      String(b.horario_saida || \"00:00\")\n        .split(\":\");\n\n    dataA.setHours(\n      Number(horaA[0] || 0),\n      Number(horaA[1] || 0)\n    );\n\n    dataB.setHours(\n      Number(horaB[0] || 0),\n      Number(horaB[1] || 0)\n    );\n\n    return dataB - dataA;\n  })\n  .slice(0, 5)\n  .map(r => ({\n    nome_aluno: r.nome_aluno,\n    turma: r.turma,\n    data_saida: r.data_saida,\n    horario_saida: r.horario_saida,\n    responsavel: r.responsavel,\n    motivo: r.motivo,\n    status: r.status\n  }));\n\n// ===============================\n// RESPOSTA FINAL\n// ===============================\n\nreturn [{\n  json: {\n    total,\n    hoje: totalHoje,\n    semana: totalSemana,\n\n    turma_mais_saidas: turmaMaisSaidas,\n\n    por_turma: porTurma,\n\n    ranking_alunos: rankingAlunos,\n\n    motivos,\n\n    por_dia: porDia,\n\n    por_hora: porHora,\n\n    recentes\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        -16
+      ],
+      "id": "4d874c68-b9f9-482b-8115-559a9102ad1e",
+      "name": "Calcular Dashboard"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $('Calcular Dashboard').first().json }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        624,
+        -16
+      ],
+      "id": "449336bf-8f72-4882-8eaa-179a49541de8",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Calcular Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular Dashboard": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}

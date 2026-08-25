@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>AutorizaIA Família</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%232f9b76'/%3E%3Ctext x='32' y='40' text-anchor='middle' font-family='Arial,sans-serif' font-size='25' font-weight='700' fill='white'%3EAI%3C/text%3E%3C/svg%3E">
+  <style>
+    :root{
+      --bg:#07131c;
+      --panel:#0b1823;
+      --panel-2:#0e1d29;
+      --panel-3:#102331;
+      --border:rgba(255,255,255,.075);
+      --border-strong:rgba(255,255,255,.12);
+      --text:#eef4f7;
+      --muted:#8296a6;
+      --muted-2:#647887;
+      --accent:#50d6a2;
+      --accent-dark:#2e9b76;
+      --accent-soft:rgba(80,214,162,.10);
+      --accent-border:rgba(80,214,162,.22);
+      --danger:#ff7474;
+      --warning:#e5b25a;
+      --shadow:0 24px 60px rgba(0,0,0,.26);
+    }
+
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      min-height:100vh;
+      background:
+        radial-gradient(circle at 10% 0%,rgba(72,201,154,.07),transparent 30%),
+        radial-gradient(circle at 95% 15%,rgba(45,125,170,.06),transparent 24%),
+        var(--bg);
+      color:var(--text);
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+
+    button,input,select,textarea{font:inherit}
+    button{cursor:pointer}
+    a{color:inherit;text-decoration:none}
+
+    .app{
+      min-height:100vh;
+      display:grid;
+      grid-template-rows:auto 1fr;
+    }
+
+    /* Cabeçalho */
+    .topbar{
+      height:82px;
+      padding:0 34px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:18px;
+      border-bottom:1px solid var(--border);
+      background:rgba(7,19,28,.86);
+      backdrop-filter:blur(16px);
+      position:sticky;
+      top:0;
+      z-index:50;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:13px;
+    }
+
+    .logo{
+      width:44px;
+      height:44px;
+      display:grid;
+      place-items:center;
+      border-radius:13px;
+      background:linear-gradient(145deg,#43b68d,#2e8a69);
+      color:#fff;
+      font-weight:900;
+      letter-spacing:-.04em;
+      box-shadow:0 12px 28px rgba(41,133,101,.22);
+    }
+
+    .brand-copy b,
+    .brand-copy span{display:block}
+
+    .brand-copy b{
+      font-size:17px;
+      letter-spacing:-.025em;
+    }
+
+    .brand-copy span{
+      margin-top:3px;
+      color:#7890a0;
+      font-size:10px;
+      font-weight:700;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+
+    .topbar-right{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    .security-pill,
+    .family-pill{
+      min-height:34px;
+      padding:0 12px;
+      display:inline-flex;
+      align-items:center;
+      gap:7px;
+      border:1px solid var(--border);
+      border-radius:999px;
+      background:#0b1924;
+      color:#8ca0ae;
+      font-size:11px;
+      font-weight:700;
+    }
+
+    .security-pill i{
+      width:7px;
+      height:7px;
+      border-radius:50%;
+      background:#55d8a5;
+      box-shadow:0 0 0 5px rgba(85,216,165,.06);
+    }
+
+    /* Conteúdo */
+    .page{
+      width:min(1180px,calc(100% - 36px));
+      margin:0 auto;
+      padding:44px 0 64px;
+    }
+
+    .hero{
+      display:grid;
+      grid-template-columns:minmax(0,1.05fr) minmax(360px,.95fr);
+      gap:24px;
+      align-items:stretch;
+      margin-bottom:24px;
+    }
+
+    .hero-card,
+    .status-card,
+    .form-card,
+    .info-card{
+      border:1px solid var(--border);
+      background:linear-gradient(180deg,#0c1a26,#091722);
+      border-radius:22px;
+      box-shadow:0 18px 44px rgba(0,0,0,.14);
+    }
+
+    .hero-card{
+      min-height:300px;
+      padding:42px;
+      position:relative;
+      overflow:hidden;
+    }
+
+    .hero-card::after{
+      content:"";
+      position:absolute;
+      width:330px;
+      height:330px;
+      border-radius:50%;
+      right:-110px;
+      top:-120px;
+      background:radial-gradient(circle,rgba(79,211,161,.12),rgba(79,211,161,0) 68%);
+      pointer-events:none;
+    }
+
+    .eyebrow{
+      color:var(--accent);
+      font-size:10px;
+      font-weight:900;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+    }
+
+    .hero h1{
+      margin:14px 0 14px;
+      max-width:650px;
+      font-size:clamp(34px,5vw,56px);
+      line-height:1.02;
+      letter-spacing:-.055em;
+    }
+
+    .hero p{
+      max-width:630px;
+      margin:0;
+      color:#90a4b2;
+      line-height:1.7;
+      font-size:15px;
+    }
+
+    .hero-steps{
+      margin-top:30px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+
+    .hero-step{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:9px 11px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.055);
+      background:rgba(255,255,255,.018);
+      color:#91a5b2;
+      font-size:11px;
+      font-weight:700;
+    }
+
+    .hero-step b{
+      width:20px;
+      height:20px;
+      display:grid;
+      place-items:center;
+      border-radius:7px;
+      background:rgba(80,214,162,.09);
+      color:#66dfb1;
+      font-size:10px;
+    }
+
+    .status-card{
+      padding:28px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+    }
+
+    .status-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:14px;
+    }
+
+    .status-head h2{
+      margin:6px 0 0;
+      font-size:21px;
+      letter-spacing:-.035em;
+    }
+
+    .status-badge{
+      padding:7px 10px;
+      border-radius:999px;
+      border:1px solid rgba(80,214,162,.18);
+      background:rgba(80,214,162,.065);
+      color:#73dfb5;
+      font-size:10px;
+      font-weight:900;
+      letter-spacing:.05em;
+      text-transform:uppercase;
+    }
+
+    .status-empty{
+      padding:28px 4px 16px;
+      color:#7f94a4;
+      line-height:1.65;
+      font-size:13px;
+    }
+
+    .status-empty strong{
+      display:block;
+      color:#dce6eb;
+      margin-bottom:7px;
+      font-size:14px;
+    }
+
+    .status-demo{
+      display:grid;
+      gap:10px;
+      margin-top:8px;
+    }
+
+    .status-row{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:12px 13px;
+      border:1px solid rgba(255,255,255,.055);
+      border-radius:12px;
+      background:rgba(255,255,255,.018);
+      color:#7e92a1;
+      font-size:11px;
+    }
+
+    .status-row i{
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:#566a79;
+    }
+
+    .status-row.active{
+      color:#cfe6dc;
+      border-color:rgba(80,214,162,.13);
+      background:rgba(80,214,162,.035);
+    }
+
+    .status-row.active i{background:var(--accent)}
+
+    /* Formulário */
+    .content-grid{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) 330px;
+      gap:24px;
+      align-items:start;
+    }
+
+    .form-card{padding:30px}
+
+    .section-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:26px;
+    }
+
+    .section-head h2{
+      margin:6px 0 0;
+      font-size:24px;
+      letter-spacing:-.04em;
+    }
+
+    .section-head p{
+      margin:7px 0 0;
+      color:#718696;
+      font-size:12px;
+    }
+
+    .step-indicator{
+      min-width:62px;
+      text-align:right;
+      color:#6f8493;
+      font-size:10px;
+      font-weight:800;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+
+    .form-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:18px;
+    }
+
+    .field.full{grid-column:1/-1}
+
+    .field label{
+      display:block;
+      margin-bottom:7px;
+      color:#8599a8;
+      font-size:10px;
+      font-weight:850;
+      letter-spacing:.07em;
+      text-transform:uppercase;
+    }
+
+    .required{color:#5dd8aa}
+
+    input,
+    select,
+    textarea{
+      width:100%;
+      min-height:48px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      background:#081620;
+      color:#eef4f7;
+      outline:none;
+      padding:0 14px;
+      transition:border-color .18s ease,box-shadow .18s ease,background .18s ease;
+    }
+
+    textarea{
+      min-height:105px;
+      padding-top:13px;
+      resize:vertical;
+      line-height:1.5;
+    }
+
+    input::placeholder,
+    textarea::placeholder{color:#4f6575}
+
+    input:focus,
+    select:focus,
+    textarea:focus{
+      border-color:rgba(80,214,162,.34);
+      box-shadow:0 0 0 3px rgba(80,214,162,.055);
+      background:#0a1924;
+    }
+
+    .date-time{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+
+    .quick-reasons{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:9px;
+    }
+
+    .reason-chip{
+      min-height:34px;
+      padding:0 11px;
+      border:1px solid var(--border);
+      border-radius:10px;
+      background:#0b1a25;
+      color:#8094a3;
+      font-size:10px;
+      font-weight:800;
+      transition:.16s ease;
+    }
+
+    .reason-chip:hover{
+      color:#dce8ed;
+      border-color:var(--border-strong);
+    }
+
+    .reason-chip.active{
+      color:#dff8ee;
+      border-color:var(--accent-border);
+      background:var(--accent-soft);
+    }
+
+    .field-hint{
+      margin-top:7px;
+      color:#617786;
+      font-size:10px;
+      line-height:1.5;
+    }
+
+    /* Upload */
+    .upload-box{
+      position:relative;
+      min-height:150px;
+      border:1px dashed rgba(255,255,255,.13);
+      border-radius:15px;
+      background:rgba(255,255,255,.015);
+      display:grid;
+      place-items:center;
+      padding:24px;
+      text-align:center;
+      transition:.18s ease;
+    }
+
+    .upload-box:hover,
+    .upload-box.dragover{
+      border-color:rgba(80,214,162,.34);
+      background:rgba(80,214,162,.035);
+    }
+
+    .upload-box input{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      opacity:0;
+      cursor:pointer;
+    }
+
+    .upload-icon{
+      width:44px;
+      height:44px;
+      margin:0 auto 12px;
+      display:grid;
+      place-items:center;
+      border-radius:12px;
+      border:1px solid rgba(80,214,162,.14);
+      background:rgba(80,214,162,.055);
+      color:#6bdfb2;
+    }
+
+    .upload-icon svg{
+      width:20px;
+      height:20px;
+      fill:none;
+      stroke:currentColor;
+      stroke-width:1.7;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+    }
+
+    .upload-box strong{
+      display:block;
+      font-size:13px;
+      margin-bottom:5px;
+    }
+
+    .upload-box span{
+      color:#6f8594;
+      font-size:10px;
+      line-height:1.5;
+    }
+
+    .file-preview{
+      display:none;
+      align-items:center;
+      gap:12px;
+      margin-top:10px;
+      padding:11px 12px;
+      border:1px solid rgba(80,214,162,.12);
+      border-radius:11px;
+      background:rgba(80,214,162,.035);
+    }
+
+    .file-preview.show{display:flex}
+
+    .file-preview-icon{
+      width:34px;
+      height:34px;
+      display:grid;
+      place-items:center;
+      border-radius:9px;
+      background:#102633;
+      color:#61d8aa;
+      font-size:11px;
+      font-weight:900;
+    }
+
+    .file-preview-text{
+      min-width:0;
+      flex:1;
+    }
+
+    .file-preview-text b,
+    .file-preview-text small{display:block}
+
+    .file-preview-text b{
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      font-size:11px;
+    }
+
+    .file-preview-text small{
+      margin-top:3px;
+      color:#687e8d;
+      font-size:9px;
+    }
+
+    .remove-file{
+      border:0;
+      background:transparent;
+      color:#718695;
+      font-size:18px;
+    }
+
+    /* Ações */
+    .form-actions{
+      margin-top:26px;
+      padding-top:22px;
+      border-top:1px solid var(--border);
+      display:flex;
+      justify-content:flex-end;
+      gap:10px;
+    }
+
+    .btn{
+      min-height:46px;
+      padding:0 17px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      font-weight:800;
+      font-size:12px;
+      transition:.18s ease;
+    }
+
+    .btn.secondary{
+      background:#0b1924;
+      color:#8297a5;
+    }
+
+    .btn.secondary:hover{
+      color:#e2eaee;
+      border-color:var(--border-strong);
+    }
+
+    .btn.primary{
+      min-width:170px;
+      background:linear-gradient(180deg,#3aa77f,#2d8d6a);
+      color:white;
+      border-color:#3ba67f;
+      box-shadow:0 13px 30px rgba(35,117,87,.18);
+    }
+
+    .btn.primary:hover{
+      transform:translateY(-1px);
+      filter:brightness(1.05);
+    }
+
+    /* Lateral */
+    .side-stack{
+      display:grid;
+      gap:16px;
+      position:sticky;
+      top:105px;
+    }
+
+    .info-card{padding:22px}
+
+    .info-card h3{
+      margin:7px 0 13px;
+      font-size:16px;
+      letter-spacing:-.03em;
+    }
+
+    .info-card p{
+      margin:0;
+      color:#748a99;
+      font-size:11px;
+      line-height:1.65;
+    }
+
+    .info-list{
+      display:grid;
+      gap:10px;
+      margin-top:17px;
+    }
+
+    .info-item{
+      display:grid;
+      grid-template-columns:28px 1fr;
+      gap:10px;
+      align-items:start;
+    }
+
+    .info-num{
+      width:28px;
+      height:28px;
+      display:grid;
+      place-items:center;
+      border-radius:9px;
+      border:1px solid rgba(80,214,162,.12);
+      background:rgba(80,214,162,.04);
+      color:#68dcb0;
+      font-size:10px;
+      font-weight:900;
+    }
+
+    .info-item b,
+    .info-item span{display:block}
+
+    .info-item b{
+      font-size:11px;
+      margin-bottom:3px;
+    }
+
+    .info-item span{
+      color:#657b8a;
+      font-size:9px;
+      line-height:1.45;
+    }
+
+    .privacy-note{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      padding:13px;
+      margin-top:17px;
+      border-radius:11px;
+      background:rgba(255,255,255,.018);
+      border:1px solid rgba(255,255,255,.05);
+      color:#6f8493;
+      font-size:9px;
+      line-height:1.55;
+    }
+
+    /* Confirmação */
+    .overlay{
+      position:fixed;
+      inset:0;
+      z-index:100;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+      background:rgba(3,10,15,.78);
+      backdrop-filter:blur(10px);
+    }
+
+    .overlay.show{display:flex}
+
+    .modal{
+      width:min(650px,100%);
+      border:1px solid var(--border);
+      border-radius:20px;
+      background:#0a1823;
+      box-shadow:0 36px 90px rgba(0,0,0,.48);
+      overflow:hidden;
+      animation:modalIn .26s cubic-bezier(.2,.85,.25,1.08);
+    }
+
+    @keyframes modalIn{
+      from{opacity:0;transform:translateY(14px) scale(.985)}
+      to{opacity:1;transform:none}
+    }
+
+    .modal-head{
+      padding:22px 24px;
+      border-bottom:1px solid var(--border);
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+    }
+
+    .modal-head h3{
+      margin:6px 0 0;
+      font-size:21px;
+    }
+
+    .close{
+      width:36px;
+      height:36px;
+      border:1px solid var(--border);
+      border-radius:10px;
+      background:#0e1d29;
+      color:#8195a3;
+      font-size:19px;
+    }
+
+    .summary{
+      padding:20px 24px;
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:10px;
+    }
+
+    .summary-item{
+      padding:12px 13px;
+      border:1px solid rgba(255,255,255,.055);
+      border-radius:11px;
+      background:rgba(255,255,255,.018);
+    }
+
+    .summary-item.full{grid-column:1/-1}
+
+    .summary-item small,
+    .summary-item strong{display:block}
+
+    .summary-item small{
+      margin-bottom:5px;
+      color:#687e8d;
+      font-size:9px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      font-weight:850;
+    }
+
+    .summary-item strong{
+      font-size:12px;
+      line-height:1.45;
+    }
+
+    .modal-actions{
+      padding:18px 24px 22px;
+      display:flex;
+      justify-content:flex-end;
+      gap:10px;
+      border-top:1px solid var(--border);
+    }
+
+    /* Sucesso */
+    .success-view{
+      width:min(620px,100%);
+      text-align:center;
+      padding:42px 32px 36px;
+      border:1px solid var(--border);
+      border-radius:22px;
+      background:#0a1823;
+      box-shadow:0 36px 90px rgba(0,0,0,.48);
+      animation:modalIn .3s ease;
+    }
+
+    .success-check{
+      width:84px;
+      height:84px;
+      margin:0 auto 22px;
+      display:grid;
+      place-items:center;
+      border-radius:50%;
+      background:rgba(80,214,162,.07);
+      border:1px solid rgba(80,214,162,.22);
+      color:#69dfb1;
+    }
+
+    .success-check svg{
+      width:34px;
+      height:34px;
+      fill:none;
+      stroke:currentColor;
+      stroke-width:2;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+    }
+
+    .success-view h2{
+      margin:8px 0 8px;
+      font-size:27px;
+      letter-spacing:-.04em;
+    }
+
+    .success-view p{
+      margin:0 auto;
+      max-width:470px;
+      color:#8296a5;
+      line-height:1.65;
+      font-size:12px;
+    }
+
+    .protocol{
+      display:inline-block;
+      margin-top:19px;
+      padding:8px 10px;
+      border:1px solid rgba(80,214,162,.12);
+      border-radius:9px;
+      background:rgba(80,214,162,.035);
+      color:#7edfb7;
+      font:800 10px ui-monospace,SFMono-Regular,Consolas,monospace;
+    }
+
+    .success-steps{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:8px;
+      margin:24px 0;
+    }
+
+    .success-step{
+      padding:12px 8px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.055);
+      background:rgba(255,255,255,.016);
+      color:#647a89;
+      font-size:9px;
+      font-weight:800;
+    }
+
+    .success-step.active{
+      color:#dff6ed;
+      border-color:rgba(80,214,162,.14);
+      background:rgba(80,214,162,.04);
+    }
+
+    @media(max-width:950px){
+      .hero,
+      .content-grid{
+        grid-template-columns:1fr;
+      }
+      .side-stack{position:static}
+      .status-card{min-height:250px}
+    }
+
+    @media(max-width:680px){
+      .topbar{
+        height:auto;
+        min-height:76px;
+        padding:14px 18px;
+      }
+      .topbar-right .security-pill{display:none}
+      .page{
+        width:min(100% - 24px,1180px);
+        padding-top:26px;
+      }
+      .hero-card,
+      .status-card,
+      .form-card{padding:22px}
+      .form-grid,
+      .date-time,
+      .summary{
+        grid-template-columns:1fr;
+      }
+      .field.full,
+      .summary-item.full{grid-column:auto}
+      .form-actions,
+      .modal-actions{
+        flex-direction:column-reverse;
+      }
+      .btn{width:100%}
+      .success-steps{grid-template-columns:1fr}
+    }
+  
+    .quick-actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:7px;
+      margin-top:8px;
+    }
+
+    .quick-action{
+      min-height:31px;
+      padding:0 10px;
+      border:1px solid var(--border);
+      border-radius:9px;
+      background:#0b1a25;
+      color:#778c9b;
+      font-size:9px;
+      font-weight:850;
+      transition:.16s ease;
+    }
+
+    .quick-action:hover{
+      color:#dce8ed;
+      border-color:var(--border-strong);
+      background:#0e202d;
+    }
+
+    .quick-action.active{
+      color:#e3f8ef;
+      border-color:var(--accent-border);
+      background:var(--accent-soft);
+    }
+
+
+    /* Botões rápidos maiores para facilitar a leitura */
+    .quick-action{
+      min-height:38px;
+      padding:0 14px;
+      font-size:10.5px;
+      border-radius:10px;
+    }
+
+    .reason-chip{
+      min-height:39px;
+      padding:0 14px;
+      font-size:10.5px;
+      border-radius:11px;
+    }
+
+    .btn:disabled{opacity:.65;cursor:not-allowed;transform:none!important;filter:none!important}
+
+    .btn.test-data{
+      margin-right:auto;
+      background:rgba(229,178,90,.07);
+      color:#d9b66f;
+      border-color:rgba(229,178,90,.18);
+    }
+
+    .btn.test-data:hover{
+      color:#f0ce87;
+      border-color:rgba(229,178,90,.30);
+      background:rgba(229,178,90,.10);
+    }
+
+
+    .btn.test-data::before{
+      content:"";
+      width:7px;
+      height:7px;
+      display:inline-block;
+      margin-right:7px;
+      border-radius:50%;
+      background:#d9b66f;
+      box-shadow:0 0 0 4px rgba(217,182,111,.06);
+      vertical-align:1px;
+    }
+
+
+    .upload-box.has-file{
+      border-color:rgba(80,214,162,.32);
+      background:rgba(80,214,162,.035);
+    }
+
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">AI</div>
+      <div class="brand-copy">
+        <b>AutorizaIA Família</b>
+        <span>Portal do responsável</span>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <div class="security-pill"><i></i> Ambiente seguro</div>
+      <div class="family-pill">Família</div><div class="family-pill" style="color:#d9b66f;border-color:rgba(229,178,90,.18)">Portal de solicitações</div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <article class="hero-card">
+        <div class="eyebrow">SOLICITAÇÃO DE SAÍDA</div>
+        <h1>Solicite a saída do aluno de forma simples.</h1>
+        <p>Envie os dados da saída para análise da escola. A solicitação será encaminhada à equipe responsável, que poderá aprovar ou recusar o pedido.</p>
+
+        <div class="hero-steps">
+          <div class="hero-step"><b>1</b> Preencha os dados</div>
+          <div class="hero-step"><b>2</b> Envie a solicitação</div>
+          <div class="hero-step"><b>3</b> Aguarde a análise</div>
+        </div>
+      </article>
+
+      <aside class="status-card">
+        <div>
+          <div class="status-head">
+            <div>
+              <div class="eyebrow">ACOMPANHAMENTO</div>
+              <h2>Status da solicitação</h2>
+            </div>
+            <div class="status-badge">Demonstração</div>
+          </div>
+
+          <div class="status-empty">
+            <strong>Nenhuma solicitação enviada ainda.</strong>
+            Depois do envio, o responsável poderá acompanhar aqui o andamento do pedido.
+          </div>
+        </div>
+
+        <div class="status-demo">
+          <div class="status-row active"><i></i> Solicitação enviada</div>
+          <div class="status-row"><i></i> Aguardando análise da escola</div>
+          <div class="status-row"><i></i> Decisão da escola</div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="content-grid">
+      <article class="form-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">NOVA SOLICITAÇÃO</div>
+            <h2>Dados da saída</h2>
+            <p>Preencha as informações para encaminhar o pedido à escola.</p>
+          </div>
+          <div class="step-indicator">Etapa 1 de 1</div>
+        </div>
+
+        <form id="requestForm">
+          <div class="form-grid">
+            <div class="field">
+              <label>Nome do aluno <span class="required">*</span></label>
+              <input id="studentName" placeholder="Ex.: Maiccon Richard" required>
+            </div>
+
+            <div class="field">
+              <label>Turma <span class="required">*</span></label>
+              <select id="studentClass" required>
+                <option value="">Selecione a turma</option>
+                <option>1 ADM A</option>
+                <option>1 DS A</option>
+                <option>1 DS B</option>
+                <option>2 ADM A</option>
+                <option>2 ADM B</option>
+                <option>2 DS A</option>
+                <option>2 DS B</option>
+                <option>3 ADM A</option>
+                <option>3 ADM B</option>
+                <option>3 DS A</option>
+                <option>3 DS B</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Data da saída <span class="required">*</span></label>
+              <input id="exitDate" type="date" required>
+              <div class="quick-actions">
+                <button class="quick-action" type="button" data-date-action="today">Hoje</button>
+                <button class="quick-action" type="button" data-date-action="tomorrow">Amanhã</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Horário desejado <span class="required">*</span></label>
+              <input id="exitTime" type="time" required>
+              <div class="quick-actions">
+                <button class="quick-action" type="button" data-time-action="now">Agora</button>
+                <button class="quick-action" type="button" data-time-action="30">+30 min</button>
+                <button class="quick-action" type="button" data-time-action="60">+1 hora</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Nome do responsável <span class="required">*</span></label>
+              <input id="guardianName" placeholder="Nome completo" required>
+            </div>
+
+            <div class="field">
+              <label>Telefone <span class="required">*</span></label>
+              <input id="guardianPhone" inputmode="tel" placeholder="(81) 99999-9999" required>
+            </div>
+
+            <div class="field full">
+              <label>Motivo da saída <span class="required">*</span></label>
+              <textarea id="reason" placeholder="Explique brevemente o motivo da solicitação." required></textarea>
+
+              <div class="quick-reasons">
+                <button class="reason-chip" type="button" data-reason="Consulta médica">Consulta médica</button>
+                <button class="reason-chip" type="button" data-reason="Dentista">Dentista</button>
+                <button class="reason-chip" type="button" data-reason="Exame">Exame</button>
+                <button class="reason-chip" type="button" data-reason="Mal-estar">Mal-estar</button>
+                <button class="reason-chip" type="button" data-reason="Compromisso familiar">Compromisso familiar</button>
+                <button class="reason-chip" type="button" data-reason="Emergência familiar">Emergência familiar</button>
+                <button class="reason-chip" type="button" data-reason="Transporte">Transporte</button>
+                <button class="reason-chip" type="button" data-reason="Pessoal">Pessoal</button>
+              </div>
+
+              <div class="field-hint">Se o motivo for particular, selecione “Pessoal”. Não é necessário detalhar informações sensíveis.</div>
+            </div>
+
+            <div class="field full">
+              <label>Comprovante <span style="font-weight:700;color:#5e7484">(opcional)</span></label>
+
+              <div class="upload-box" id="uploadBox">
+                <input id="proofFile" type="file" accept=".pdf,image/*">
+                <div>
+                  <div class="upload-icon">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M12 16V4"/>
+                      <path d="m8 8 4-4 4 4"/>
+                      <path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>
+                    </svg>
+                  </div>
+                  <strong>Adicionar comprovante</strong>
+                  <span>Foto, imagem ou PDF de agendamento, consulta ou documento relacionado.</span>
+                </div>
+              </div>
+
+              <div class="file-preview" id="filePreview">
+                <div class="file-preview-icon">DOC</div>
+                <div class="file-preview-text">
+                  <b id="fileName">arquivo.pdf</b>
+                  <small id="fileMeta">Documento anexado</small>
+                </div>
+                <button class="remove-file" id="removeFile" type="button" aria-label="Remover arquivo">×</button>
+              </div>
+
+              <div class="field-hint">O comprovante não é obrigatório. Ele serve apenas para ajudar a escola na análise da solicitação.</div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn test-data" id="fillTestDataBtn" type="button">Dados de demonstração</button>
+            <button class="btn secondary" id="clearBtn" type="reset">Limpar</button>
+            <button class="btn primary" type="submit">Revisar solicitação</button>
+          </div>
+        </form>
+      </article>
+
+      <aside class="side-stack">
+        <article class="info-card">
+          <div class="eyebrow">COMO FUNCIONA</div>
+          <h3>A escola continua responsável pela decisão.</h3>
+          <p>O envio pelo portal não libera o aluno automaticamente. Toda solicitação precisa ser analisada pela equipe da escola.</p>
+
+          <div class="info-list">
+            <div class="info-item">
+              <div class="info-num">1</div>
+              <div><b>Responsável solicita</b><span>Preenche os dados e envia o pedido.</span></div>
+            </div>
+            <div class="info-item">
+              <div class="info-num">2</div>
+              <div><b>Escola analisa</b><span>Confere motivo, horário e eventual comprovante.</span></div>
+            </div>
+            <div class="info-item">
+              <div class="info-num">3</div>
+              <div><b>Decisão registrada</b><span>A solicitação poderá ser aprovada ou recusada.</span></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="info-card">
+          <div class="eyebrow">PRIVACIDADE</div>
+          <h3>Motivos pessoais continuam pessoais.</h3>
+          <p>Quando não for necessário informar detalhes, basta escolher o motivo “Pessoal”.</p>
+
+          <div class="privacy-note">
+            <span>As informações devem ser usadas somente para análise da saída do aluno pela escola.</span>
+          </div>
+        </article>
+      </aside>
+    </section>
+  </main>
+</div>
+
+<div class="overlay" id="reviewOverlay" aria-hidden="true">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <div class="eyebrow">REVISÃO</div>
+        <h3>Confira antes de enviar</h3>
+      </div>
+      <button class="close" id="reviewClose" type="button">×</button>
+    </div>
+
+    <div class="summary" id="summary"></div>
+
+    <div class="modal-actions">
+      <button class="btn secondary" id="backBtn" type="button">Voltar e editar</button>
+      <button class="btn primary" id="confirmBtn" type="button">Enviar solicitação</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="successOverlay" aria-hidden="true">
+  <div class="success-view">
+    <div class="success-check">
+      <svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg>
+    </div>
+    <div class="eyebrow">SOLICITAÇÃO ENVIADA</div>
+    <h2>Pedido encaminhado à escola.</h2>
+    <p>A equipe responsável receberá a solicitação para análise. A solicitação foi enviada ao AutorizaIA e registrada para análise.</p>
+
+    <div class="protocol" id="protocol">SOL-000000</div>
+
+    <div class="success-steps">
+      <div class="success-step active">Solicitação enviada</div>
+      <div class="success-step">Aguardando análise</div>
+      <div class="success-step">Decisão da escola</div>
+    </div>
+
+    <button class="btn primary" id="newRequestBtn" type="button">Fazer nova solicitação</button>
+  </div>
+</div>
+
+<script>
+  // Integração com o webhook de produção para envio de solicitações e comprovantes.
+  const REQUEST_WEBHOOK_URL="https://SEU_SUBDOMINIO.app.n8n.cloud/webhook/autorizaia-solicitacao";
+
+  const requestForm=document.getElementById("requestForm");
+  const proofFile=document.getElementById("proofFile");
+  const uploadBox=document.getElementById("uploadBox");
+  const filePreview=document.getElementById("filePreview");
+  const fileName=document.getElementById("fileName");
+  const fileMeta=document.getElementById("fileMeta");
+  const removeFile=document.getElementById("removeFile");
+
+  const reviewOverlay=document.getElementById("reviewOverlay");
+  const successOverlay=document.getElementById("successOverlay");
+  const summary=document.getElementById("summary");
+
+  const studentName=document.getElementById("studentName");
+  const studentClass=document.getElementById("studentClass");
+  const exitDate=document.getElementById("exitDate");
+  const exitTime=document.getElementById("exitTime");
+  const guardianName=document.getElementById("guardianName");
+  const guardianPhone=document.getElementById("guardianPhone");
+  const reason=document.getElementById("reason");
+
+  function todayLocal(){
+    const d=new Date();
+    const p=n=>String(n).padStart(2,"0");
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+  }
+
+  function currentTime(){
+    const d=new Date();
+    return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+  }
+
+  function dateLocalFromOffset(days){
+    const d=new Date();
+    d.setDate(d.getDate()+days);
+    const p=n=>String(n).padStart(2,"0");
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+  }
+
+  function timeFromOffset(minutes){
+    const d=new Date();
+    d.setMinutes(d.getMinutes()+minutes);
+    return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+  }
+
+  function brDate(value){
+    if(!value)return "—";
+    const [y,m,d]=value.split("-");
+    return `${d}/${m}/${y}`;
+  }
+
+  function escapeHtml(value){
+    return String(value??"")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;");
+  }
+
+  exitDate.value=todayLocal();
+  exitTime.value=currentTime();
+
+  const fillTestDataBtn=document.getElementById("fillTestDataBtn");
+  fillTestDataBtn?.addEventListener("click",()=>{
+    const nomes=[
+      "Ana Clara Silva","Bruno Henrique Souza","Caio Gabriel Lima",
+      "Isabelly Santos","João Pedro Alves","Lucas Ferreira",
+      "Maria Eduarda Costa","Pedro Henrique Melo","Rafael Oliveira",
+      "Sofia Martins","Thiago Gomes","Vitória Almeida"
+    ];
+
+    const turmas=[
+      "1 ADM A","1 DS A","1 DS B",
+      "2 ADM A","2 ADM B","2 DS A","2 DS B",
+      "3 ADM A","3 ADM B","3 DS A","3 DS B"
+    ];
+
+    const responsaveis=[
+      "Ana Souza","Carlos Lima","Fernanda Santos","José Almeida",
+      "Luciana Ferreira","Marcos Oliveira","Patrícia Gomes","Renata Costa"
+    ];
+
+    const motivos=[
+      "Consulta médica","Dentista","Exame","Mal-estar",
+      "Compromisso familiar","Emergência familiar","Transporte","Pessoal"
+    ];
+
+    const pick=list=>list[Math.floor(Math.random()*list.length)];
+    const telefone=`(81) 9${String(Math.floor(Math.random()*9000)+1000)}-${String(Math.floor(Math.random()*9000)+1000)}`;
+    const motivo=pick(motivos);
+    const dateOffset=Math.random()<.7?0:1;
+    const timeOffset=[20,30,40,60,90,120][Math.floor(Math.random()*6)];
+
+    studentName.value=pick(nomes);
+    studentClass.value=pick(turmas);
+    exitDate.value=dateLocalFromOffset(dateOffset);
+    exitTime.value=timeFromOffset(timeOffset);
+    guardianName.value=pick(responsaveis);
+    guardianPhone.value=telefone;
+    reason.value=motivo;
+
+    document.querySelectorAll(".reason-chip").forEach(btn=>{
+      btn.classList.toggle("active",btn.dataset.reason===motivo);
+    });
+
+    [studentName,guardianName,guardianPhone,reason].forEach(el=>
+      el.dispatchEvent(new Event("input",{bubbles:true}))
+    );
+    studentClass.dispatchEvent(new Event("change",{bubbles:true}));
+    exitDate.dispatchEvent(new Event("change",{bubbles:true}));
+    exitTime.dispatchEvent(new Event("change",{bubbles:true}));
+
+    fillTestDataBtn.textContent="Novos dados gerados";
+    setTimeout(()=>fillTestDataBtn.textContent="Dados de demonstração",1000);
+  });
+
+  document.querySelectorAll("[data-date-action]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const action=btn.dataset.dateAction;
+      exitDate.value=action==="tomorrow" ? dateLocalFromOffset(1) : todayLocal();
+
+      document.querySelectorAll("[data-date-action]").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      setTimeout(()=>btn.classList.remove("active"),650);
+    });
+  });
+
+  document.querySelectorAll("[data-time-action]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const action=btn.dataset.timeAction;
+      exitTime.value=action==="now" ? currentTime() : timeFromOffset(Number(action||0));
+
+      document.querySelectorAll("[data-time-action]").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      setTimeout(()=>btn.classList.remove("active"),650);
+    });
+  });
+
+  document.querySelectorAll(".reason-chip").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      document.querySelectorAll(".reason-chip").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      reason.value=btn.dataset.reason;
+      reason.focus();
+    });
+  });
+
+  reason.addEventListener("input",()=>{
+    document.querySelectorAll(".reason-chip").forEach(btn=>{
+      btn.classList.toggle("active",reason.value.trim().toLowerCase()===btn.dataset.reason.toLowerCase());
+    });
+  });
+
+  guardianPhone.addEventListener("input",()=>{
+    let v=guardianPhone.value.replace(/\D/g,"").slice(0,11);
+    if(v.length>2)v=`(${v.slice(0,2)}) ${v.slice(2)}`;
+    if(v.replace(/\D/g,"").length>7){
+      const digits=v.replace(/\D/g,"");
+      v=`(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7,11)}`;
+    }
+    guardianPhone.value=v;
+  });
+
+  proofFile.addEventListener("change",showFile);
+
+  function showFile(){
+    const file=proofFile.files?.[0];
+    if(!file){
+      filePreview.classList.remove("show");
+      return;
+    }
+
+    fileName.textContent=file.name;
+    const size=file.size<1024*1024
+      ? `${Math.max(1,Math.round(file.size/1024))} KB`
+      : `${(file.size/(1024*1024)).toFixed(1)} MB`;
+    fileMeta.textContent=`${file.type||"Arquivo"} • ${size}`;
+    filePreview.classList.add("show");
+    uploadBox.classList.add("has-file");
+  }
+
+  removeFile.addEventListener("click",()=>{
+    proofFile.value="";
+    filePreview.classList.remove("show");
+    uploadBox.classList.remove("has-file");
+  });
+
+  ["dragenter","dragover"].forEach(evt=>{
+    uploadBox.addEventListener(evt,e=>{
+      e.preventDefault();
+      uploadBox.classList.add("dragover");
+    });
+  });
+
+  ["dragleave","drop"].forEach(evt=>{
+    uploadBox.addEventListener(evt,e=>{
+      e.preventDefault();
+      uploadBox.classList.remove("dragover");
+    });
+  });
+
+  uploadBox.addEventListener("drop",e=>{
+    const file=e.dataTransfer.files?.[0];
+    if(!file)return;
+
+    const transfer=new DataTransfer();
+    transfer.items.add(file);
+    proofFile.files=transfer.files;
+    showFile();
+  });
+
+  requestForm.addEventListener("reset",()=>{
+    setTimeout(()=>{
+      exitDate.value=todayLocal();
+      exitTime.value=currentTime();
+      filePreview.classList.remove("show");
+      uploadBox.classList.remove("has-file");
+      document.querySelectorAll(".reason-chip").forEach(b=>b.classList.remove("active"));
+    },0);
+  });
+
+  requestForm.addEventListener("submit",e=>{
+    e.preventDefault();
+
+    if(!requestForm.checkValidity()){
+      requestForm.reportValidity();
+      return;
+    }
+
+    const file=proofFile.files?.[0];
+    const items=[
+      ["Aluno",studentName.value],
+      ["Turma",studentClass.value],
+      ["Data da saída",brDate(exitDate.value)],
+      ["Horário",exitTime.value],
+      ["Responsável",guardianName.value],
+      ["Telefone",guardianPhone.value],
+      ["Motivo",reason.value],
+      ["Comprovante",file?file.name:"Não anexado"]
+    ];
+
+    summary.innerHTML=items.map(([label,value],index)=>`
+      <div class="summary-item ${index===6||index===7?"full":""}">
+        <small>${escapeHtml(label)}</small>
+        <strong>${escapeHtml(value||"—")}</strong>
+      </div>
+    `).join("");
+
+    reviewOverlay.classList.add("show");
+    reviewOverlay.setAttribute("aria-hidden","false");
+  });
+
+  function closeReview(){
+    reviewOverlay.classList.remove("show");
+    reviewOverlay.setAttribute("aria-hidden","true");
+  }
+
+  document.getElementById("reviewClose").addEventListener("click",closeReview);
+  document.getElementById("backBtn").addEventListener("click",closeReview);
+
+  reviewOverlay.addEventListener("click",e=>{
+    if(e.target===reviewOverlay)closeReview();
+  });
+
+  document.getElementById("confirmBtn").addEventListener("click",async()=>{
+    const confirmBtn=document.getElementById("confirmBtn");
+    const originalText=confirmBtn.textContent;
+
+    confirmBtn.disabled=true;
+    confirmBtn.textContent="Enviando...";
+
+    const formData=new FormData();
+    formData.append("nome_aluno",studentName.value.trim());
+    formData.append("turma",studentClass.value);
+    formData.append("data_saida",brDate(exitDate.value));
+    formData.append("horario_saida",exitTime.value);
+    formData.append("responsavel",guardianName.value.trim());
+    formData.append("telefone",guardianPhone.value.trim());
+    formData.append("motivo",reason.value.trim());
+
+    const file=proofFile.files?.[0];
+    if(file){
+      formData.append("comprovante",file,file.name);
+    }
+
+    try{
+      const response=await fetch(REQUEST_WEBHOOK_URL,{
+        method:"POST",
+        body:formData
+      });
+
+      if(!response.ok)throw new Error(`HTTP ${response.status}`);
+
+      const raw=await response.text();
+      let data={};
+
+      if(raw.trim()){
+        try{
+          data=JSON.parse(raw);
+
+          // Em alguns retornos do n8n, o JSON pode vir como texto dentro de outro JSON.
+          if(typeof data==="string"){
+            try{data=JSON.parse(data)}
+            catch{}
+          }
+        }catch{
+          data={mensagem:raw}
+        }
+      }
+
+      // Aceita diferentes formatos de resposta do n8n.
+      const responseData=
+        data && typeof data==="object"
+          ? (data.body && typeof data.body==="object"
+              ? data.body
+              : data.data && typeof data.data==="object"
+                ? data.data
+                : data)
+          : {};
+
+      // Se o n8n devolver texto, tenta localizar um código SOL-... diretamente.
+      const protocolFromRaw=(raw.match(/SOL-[A-Z0-9-]+/i)||[])[0]||"";
+
+      closeReview();
+
+      document.getElementById("protocol").textContent=
+        responseData.id_solicitacao ||
+        responseData.id ||
+        responseData.protocolo ||
+        protocolFromRaw ||
+        "Solicitação registrada";
+
+      successOverlay.classList.add("show");
+      successOverlay.setAttribute("aria-hidden","false");
+    }catch(error){
+      alert(
+        "Não foi possível enviar a solicitação.\n\n"+
+        "Deixe o Webhook do n8n em 'Listening for test event' antes de enviar.\n\n"+
+        "Erro: "+error.message
+      );
+    }finally{
+      confirmBtn.disabled=false;
+      confirmBtn.textContent=originalText;
+    }
+  });
+
+  document.getElementById("newRequestBtn").addEventListener("click",()=>{
+    successOverlay.classList.remove("show");
+    successOverlay.setAttribute("aria-hidden","true");
+    requestForm.reset();
+    studentName.focus();
+    window.scrollTo({top:0,behavior:"smooth"});
+  });
+</script>
+</body>
+</html>

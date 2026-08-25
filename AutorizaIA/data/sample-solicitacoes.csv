@@ -1,0 +1,2 @@
+﻿id_solicitacao,nome_aluno,turma,data_saida,horario_saida,responsavel,telefone,motivo,comprovante,status,data_solicitacao,data_decisao,observacao_escola
+SOL-EXEMPLO-001,Aluno Exemplo 03,1 DS A,23/08/2026,13:40,Responsável Exemplo,(00) 00000-0000,Consulta,,PENDENTE,"22/08/2026, 17:00:00",,

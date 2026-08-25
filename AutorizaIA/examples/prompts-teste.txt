@@ -1,0 +1,53 @@
+AUTORIZAIA — PROMPTS DE TESTE DO N8N
+
+1. AUTORIZAÇÃO COMPLETA
+Autorizo Pedro Henrique, 2 DS B, a sair hoje às 15:20 por consulta médica. Responsável: Ana Paula.
+
+2. AUTORIZAÇÃO COM DADOS FALTANDO
+Quero autorizar Mariana Costa a sair hoje.
+
+Continuação:
+3 DS A
+José Carlos
+16:10
+compromisso familiar
+
+3. NEGATIVA DE AUTORIZAÇÃO
+Eu não autorizo Lucas Almeida, 3 DS B, a sair hoje às 14:00. Responsável: Fernanda Almeida. Motivo: consulta.
+
+4. HORÁRIO INVÁLIDO
+Autorizo Sofia Martins, 2 ADM A, a sair hoje às 27:90 por dentista. Responsável: Carla Martins.
+
+5. TURMA INVÁLIDA
+Autorizo Gabriel Souza, 4 DS C, a sair hoje às 13:30 por motivo pessoal. Responsável: Roberto Souza.
+
+6. DATA INVÁLIDA
+Autorizo Laura Mendes, 1 DS B, a sair em 31/02/2026 às 12:40 por exame médico. Responsável: Patrícia Mendes.
+
+7. ERROS DE DIGITAÇÃO
+quero autorizasao pro matheus lima 3dsa sair hoje 14h30 responsavel joana lima motivo dentista
+
+8. CONSULTA DE HISTÓRICO
+Consulte o histórico de João Santos da 2 ADM B.
+
+9. CONSULTA COM NOME AMBÍGUO
+Consulte o histórico de João.
+
+Continuação:
+2 ADM B
+
+ou
+
+João Silva
+
+10. MESMO ALUNO EM MAIS DE UMA TURMA
+Consulte o histórico de João Silva.
+
+11. ALUNO INEXISTENTE
+Consulte o histórico de Gustavo Pessoa Inexistente.
+
+12. MENSAGEM FORA DAS FUNÇÕES PRINCIPAIS
+Boa tarde, o que você consegue fazer?
+
+13. CONSULTA COM ERRO DE DIGITAÇÃO
+consute o istorico de joao silva

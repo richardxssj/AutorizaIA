@@ -1,0 +1,339 @@
+{
+  "name": "AutorizaIA • 01 • Registrar Autorização",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "autorizaia-autorizacao",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "01408aca-09c9-40be-8b1a-50a48c28b32a",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || {};\nconst texto = String(body.chatInput || \"\").trim();\n\nfunction normalizarTurma(valor) {\n  const turma = String(valor || \"\")\n    .trim()\n    .toUpperCase()\n    .replace(/[-_.]/g, \" \")\n    .replace(/\\s+/g, \" \");\n\n  const m = turma.match(/^([123])\\s*(DS|ADM)\\s*([AB])$/);\n  return m ? `${m[1]} ${m[2]} ${m[3]}` : \"\";\n}\n\nfunction dataValida(valor) {\n  const m = String(valor || \"\").match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/);\n  if (!m) return false;\n  const d = Number(m[1]), mes = Number(m[2]), a = Number(m[3]);\n  const teste = new Date(Date.UTC(a, mes - 1, d));\n  return teste.getUTCFullYear() === a && teste.getUTCMonth() === mes - 1 && teste.getUTCDate() === d;\n}\n\nfunction horarioValido(valor) {\n  const m = String(valor || \"\").match(/^(\\d{1,2}):(\\d{2})$/);\n  if (!m) return false;\n  const h = Number(m[1]), min = Number(m[2]);\n  return h >= 0 && h <= 23 && min >= 0 && min <= 59;\n}\n\nconst nome = texto.match(/Autorização para\\s+(.+?),\\s*turma/i);\nconst turma = texto.match(/turma\\s+(.+?),\\s*responsável/i);\nconst responsavel = texto.match(/responsável\\s+(.+?),\\s*data/i);\nconst data = texto.match(/data\\s+(\\d{2}\\/\\d{2}\\/\\d{4})/i);\nconst horario = texto.match(/horário\\s+(\\d{1,2}:\\d{2})/i);\nconst motivo = texto.match(/motivo\\s+(.+)$/i);\n\nconst dados = {\n  nome_aluno: nome ? nome[1].trim() : \"\",\n  turma: normalizarTurma(turma ? turma[1] : \"\"),\n  responsavel: responsavel ? responsavel[1].trim() : \"\",\n  data_saida: data ? data[1].trim() : \"\",\n  horario_saida: horario ? horario[1].trim() : \"\",\n  motivo: motivo ? motivo[1].trim() : \"\",\n  status: \"Autorizado\",\n  data_registro: new Date().toLocaleString(\"pt-BR\", { timeZone: \"America/Recife\" }),\n  sessionId: body.sessionId || \"\"\n};\n\nconst faltando = [];\nif (!dados.nome_aluno) faltando.push(\"aluno\");\nif (!dados.turma) faltando.push(\"turma válida\");\nif (!dados.responsavel) faltando.push(\"responsável\");\nif (!dados.data_saida || !dataValida(dados.data_saida)) faltando.push(\"data válida\");\nif (!dados.horario_saida || !horarioValido(dados.horario_saida)) faltando.push(\"horário válido\");\nif (!dados.motivo) faltando.push(\"motivo\");\n\ndados.valido = faltando.length === 0;\ndados.erro = dados.valido ? \"\" : `Não foi possível registrar. Verifique: ${faltando.join(\", \")}.`;\n\nreturn [{ json: dados }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        0
+      ],
+      "id": "2c242c7a-4407-43dc-b7c5-23539a6c2c72",
+      "name": "Preparar Dados da Autorização"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "SEU_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "AutorizaIA - Registro de Saídas"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "nome_aluno": "={{ $json.nome_aluno }}",
+            "turma": "={{ $json.turma }}",
+            "responsavel": "={{ $json.responsavel }}",
+            "data_saida": "={{ $json.data_saida }}",
+            "horario_saida": "={{ $json.horario_saida }}",
+            "motivo": "={{ $json.motivo }}",
+            "status": "={{ $json.status }}",
+            "data_registro": "={{ $json.data_registro }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "nome_aluno",
+              "displayName": "nome_aluno",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "turma",
+              "displayName": "turma",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "responsavel",
+              "displayName": "responsavel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "data_saida",
+              "displayName": "data_saida",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "horario_saida",
+              "displayName": "horario_saida",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "motivo",
+              "displayName": "motivo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "data_registro",
+              "displayName": "data_registro",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        400,
+        0
+      ],
+      "id": "f40fc5a9-3bf1-46c4-9b37-ce0ff9e8e9a2",
+      "name": "Registrar Saída na Planilha",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true, \"output\": \"Autorização registrada com sucesso.\" } }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        640,
+        -80
+      ],
+      "id": "0f82566c-940b-4a2e-9320-cc320a494c41",
+      "name": "Responder ao Site"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "29a212b5-f357-49bb-ae26-7593ec42ae89",
+              "leftValue": "={{ $json.valido }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        160,
+        0
+      ],
+      "id": "5bc280d4-eaa1-45bf-a2d7-aa8cfb8e9a7e",
+      "name": "Validar Dados do Site"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": false, \"output\": $json.erro || \"Dados inválidos.\" } }}",
+        "options": {
+          "responseCode": 400,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        400,
+        160
+      ],
+      "id": "5ce1de37-cd9d-4af5-9a3d-994f39ea7e6c",
+      "name": "Responder Validação"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": false, \"output\": \"Não foi possível registrar a autorização na planilha. Tente novamente.\" } }}",
+        "options": {
+          "responseCode": 500,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        640,
+        80
+      ],
+      "id": "ba04bbc1-b159-4c9d-a29f-061ab8d1b5e0",
+      "name": "Responder Erro da Planilha"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Preparar Dados da Autorização",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Dados da Autorização": {
+      "main": [
+        [
+          {
+            "node": "Validar Dados do Site",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar Dados do Site": {
+      "main": [
+        [
+          {
+            "node": "Registrar Saída na Planilha",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder Validação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Saída na Planilha": {
+      "main": [
+        [
+          {
+            "node": "Responder ao Site",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder Erro da Planilha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}

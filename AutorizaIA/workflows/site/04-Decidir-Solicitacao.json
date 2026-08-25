@@ -1,0 +1,329 @@
+{
+  "name": "AutorizaIA • 04 • Decidir Solicitação",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "autorizaia-decidir-solicitacao",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "1da77b62-8713-4412-a4f7-517ea5ab02d1",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || $json;\n\nconst id = String(body.id_solicitacao || \"\").trim();\nconst decisao = String(body.decisao || \"\").trim().toUpperCase();\nconst observacao = String(body.observacao || \"\").trim();\n\nif (!id) {\n  throw new Error(\"id_solicitacao não informado\");\n}\n\nif (![\"APROVADO\", \"RECUSADO\"].includes(decisao)) {\n  throw new Error(\"Decisão inválida\");\n}\n\nconst agora = new Date().toLocaleString(\"pt-BR\", {\n  timeZone: \"America/Recife\"\n});\n\nreturn [{\n  json: {\n    id_solicitacao: id,\n    status: decisao,\n    observacao_escola: observacao,\n    data_decisao: agora\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "062a9363-1fc2-406e-bbf0-e1d85a90ed1b",
+      "name": "Preparar decisão"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "SEU_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "AutorizaIA - Registro de Saídas"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1600149817,
+          "mode": "list",
+          "cachedResultName": "Solicitações"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "id_solicitacao",
+              "lookupValue": "={{ $('Preparar decisão').item.json.id_solicitacao }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        0
+      ],
+      "id": "fc5012d7-113c-4cd1-8b25-8134327dc82b",
+      "name": "Get row(s) in sheet",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        896,
+        0
+      ],
+      "id": "57095cc9-9d1a-4b9b-b781-7f356facb815",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "SEU_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "AutorizaIA - Registro de Saídas"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1600149817,
+          "mode": "list",
+          "cachedResultName": "Solicitações"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id_solicitacao": "={{ $json.id_solicitacao }}",
+            "nome_aluno": "={{ $json.nome_aluno }}",
+            "turma": "={{ $json.turma }}",
+            "status": "={{ $('Preparar decisão').first().json.status }}",
+            "data_solicitacao": "={{ $json.data_solicitacao }}",
+            "data_decisao": "={{ $('Preparar decisão').first().json.data_decisao }}",
+            "observacao_escola": "={{ $('Preparar decisão').first().json.observacao_escola }}",
+            "data_saida": "={{ $json.data_saida }}",
+            "responsavel": "={{ $json.responsavel }}",
+            "horario_saida": "={{ $json.horario_saida }}",
+            "telefone": "={{ $json.telefone }}",
+            "motivo": "={{ $json.motivo }}",
+            "comprovante": "={{ $json.comprovante }}"
+          },
+          "matchingColumns": [
+            "id_solicitacao"
+          ],
+          "schema": [
+            {
+              "id": "id_solicitacao",
+              "displayName": "id_solicitacao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "nome_aluno",
+              "displayName": "nome_aluno",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "turma",
+              "displayName": "turma",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "data_saida",
+              "displayName": "data_saida",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "horario_saida",
+              "displayName": "horario_saida",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "responsavel",
+              "displayName": "responsavel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "telefone",
+              "displayName": "telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "motivo",
+              "displayName": "motivo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "comprovante",
+              "displayName": "comprovante",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "data_solicitacao",
+              "displayName": "data_solicitacao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "data_decisao",
+              "displayName": "data_decisao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "observacao_escola",
+              "displayName": "observacao_escola",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        672,
+        0
+      ],
+      "id": "77822ad1-26b1-411d-a326-1db08f8660f4",
+      "name": "Update row in sheet",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Preparar decisão",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar decisão": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}

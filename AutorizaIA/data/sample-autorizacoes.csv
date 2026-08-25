@@ -1,0 +1,3 @@
+﻿nome_aluno,turma,responsavel,data_saida,horario_saida,motivo,status,data_registro
+Aluno Exemplo 01,3 DS A,Responsável Exemplo,22/08/2026,14:30,Consulta médica,Autorizado,"22/08/2026, 13:50:00"
+Aluno Exemplo 02,2 ADM B,Responsável Exemplo,22/08/2026,15:10,Compromisso familiar,Autorizado,"22/08/2026, 14:20:00"

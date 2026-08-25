@@ -1,0 +1,177 @@
+{
+  "name": "AutorizaIA • 07 • Consultar Histórico",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "autorizaia-historico",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d56095f0-decc-44fa-8055-0bb3e1af078b",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || {};\n\nconst nome = String(body.nome_aluno || \"\")\n  .trim()\n  .toLowerCase();\n\nconst turma = String(body.turma || \"\")\n  .trim()\n  .toUpperCase()\n  .replace(/[-_.]/g, \" \")\n  .replace(/\\s+/g, \" \");\n\n// Aceita 3dsa, 3DSA, 2admb etc.\nconst match = turma.match(/^([123])\\s*(DS|ADM)\\s*([AB])$/);\n\nconst turmaFormatada = match\n  ? `${match[1]} ${match[2]} ${match[3]}`\n  : turma;\n\nreturn [{\n  json: {\n    nome_aluno: nome,\n    turma: turmaFormatada\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "b79f1e63-c664-498d-abea-38c6f5159a70",
+      "name": "Preparar Consulta"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "SEU_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "AutorizaIA - Registro de Saídas"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        0
+      ],
+      "id": "f76da4c9-f747-4eae-b6d1-e54bbce36934",
+      "name": "Buscar Histórico",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "jsCode": "const registros = $input.all();\nconst consulta = $('Preparar Consulta').first().json;\n\nfunction normalizar(texto) {\n  return String(texto || \"\")\n    .normalize(\"NFD\")\n    .replace(/[\\u0300-\\u036f]/g, \"\")\n    .toLowerCase()\n    .trim()\n    .replace(/\\s+/g, \" \");\n}\n\nconst nomeBuscado = normalizar(consulta.nome_aluno);\nconst turmaBuscada = normalizar(consulta.turma);\n\nlet encontrados = registros.filter(item => {\n  const nome = normalizar(item.json.nome_aluno);\n  const turma = normalizar(item.json.turma);\n  const nomeCorreto = !nomeBuscado || nome.includes(nomeBuscado);\n  const turmaCorreta = !turmaBuscada || turma === turmaBuscada;\n  return nomeCorreto && turmaCorreta;\n});\n\nif (encontrados.length === 0) {\n  return [{ json: { encontrado: false, nome_aluno: consulta.nome_aluno, turma: consulta.turma } }];\n}\n\n// Consulta vazia é usada pelas análises do site para recuperar todos os registros.\nif (!nomeBuscado) return encontrados;\n\n// Correspondência exata tem prioridade sobre correspondências parciais.\nconst exatos = encontrados.filter(item => normalizar(item.json.nome_aluno) === nomeBuscado);\nif (exatos.length) encontrados = exatos;\n\nconst pessoas = new Map();\nfor (const item of encontrados) {\n  const nomeOriginal = String(item.json.nome_aluno || \"\").trim();\n  const id = normalizar(nomeOriginal);\n  if (!pessoas.has(id)) pessoas.set(id, { nome_aluno: nomeOriginal, turmas: new Set() });\n  pessoas.get(id).turmas.add(String(item.json.turma || \"Não informado\").trim());\n}\n\nif (pessoas.size > 1) {\n  const candidatos = [...pessoas.values()].map(p => ({\n    nome_aluno: p.nome_aluno,\n    turmas: [...p.turmas]\n  }));\n  return [{ json: { encontrado: false, ambiguo: true, candidatos } }];\n}\n\nreturn encontrados;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "320bc96e-809c-4344-a13f-83c19a2075eb",
+      "name": "Filtrar Histórico"
+    },
+    {
+      "parameters": {
+        "jsCode": "const registros = $input.all().map(item => item.json);\n\nif (registros.length === 1 && registros[0]?.ambiguo) {\n  return [{ json: registros[0] }];\n}\n\nif (\n  registros.length === 0 ||\n  registros[0]?.encontrado === false ||\n  !registros[0]?.nome_aluno\n) {\n  return [{ json: { encontrado: false, registros: [] } }];\n}\n\n// Remove duplicatas idênticas apenas da resposta exibida.\nconst vistos = new Set();\nconst unicos = registros.filter(r => {\n  const chave = [r.nome_aluno,r.turma,r.data_saida,r.horario_saida,r.responsavel,r.motivo,r.status]\n    .map(v => String(v ?? '').trim().toLowerCase()).join('|');\n  if (vistos.has(chave)) return false;\n  vistos.add(chave); return true;\n});\n\nunicos.sort((a, b) => {\n  const parse = (data, hora) => {\n    const [d, m, y] = String(data || \"\").split(\"/\");\n    return new Date(`${y}-${m}-${d}T${hora || \"00:00\"}:00`);\n  };\n  return parse(b.data_saida, b.horario_saida) - parse(a.data_saida, a.horario_saida);\n});\n\nconst turmas = [...new Set(unicos.map(r => r.turma).filter(Boolean))];\nreturn [{\n  json: {\n    encontrado: true,\n    nome_aluno: unicos[0].nome_aluno,\n    turma: turmas.length === 1 ? turmas[0] : turmas.join(', '),\n    quantidade: unicos.length,\n    registros: unicos\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        0
+      ],
+      "id": "ab097cb2-3168-40a1-9e0f-5ddbcb88128b",
+      "name": "Montar Histórico"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $('Montar Histórico').first().json }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "f8fc6e54-4884-40a2-9727-ea72ac76d441",
+      "name": "Responder ao Site"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Preparar Consulta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Consulta": {
+      "main": [
+        [
+          {
+            "node": "Buscar Histórico",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Histórico": {
+      "main": [
+        [
+          {
+            "node": "Filtrar Histórico",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar Histórico": {
+      "main": [
+        [
+          {
+            "node": "Montar Histórico",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar Histórico": {
+      "main": [
+        [
+          {
+            "node": "Responder ao Site",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}

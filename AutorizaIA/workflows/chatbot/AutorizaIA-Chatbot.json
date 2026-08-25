@@ -1,0 +1,1107 @@
+{
+  "name": "AutorizaIA • Chatbot",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "responseMode": "lastNode"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -1824,
+        2272
+      ],
+      "id": "83c6b160-f7f4-4876-acc1-2acd5081fbf1",
+      "name": "Receber Mensagem",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "Você é o classificador de intenção do AutorizaIA, um sistema escolar de autorizações de saída.\n\nClassifique a mensagem atual em EXATAMENTE UMA destas categorias:\n\nAUTORIZACAO\n- registrar, preencher, confirmar, negar ou corrigir uma autorização de saída de aluno;\n- inclui frases afirmativas ou negativas sobre permitir a saída;\n- inclui RESPOSTAS CURTAS que completam uma autorização em andamento, como turma, responsável, data, horário ou motivo.\n\nCONSULTA\n- consultar, pesquisar, verificar ou visualizar o histórico de saídas de um aluno;\n- inclui respostas de turma quando a conversa anterior estiver aguardando a turma de uma consulta.\n\nOUTRO\n- cumprimentos, agradecimentos, dúvidas gerais, pedidos de ajuda, mensagens sem relação com as duas funções acima, comandos não suportados ou mensagens realmente sem contexto suficiente.\n\nREGRA MAIS IMPORTANTE — CONTINUIDADE\nUse a memória da conversa. Se as últimas mensagens estiverem preenchendo uma AUTORIZAÇÃO, mantenha AUTORIZACAO para qualquer resposta curta plausível como dado faltante, mesmo que seja apenas uma palavra.\n\nExemplos de continuação de AUTORIZACAO:\n- \"3 DS A\" -> turma\n- \"14:30\" ou \"14h30\" -> horário\n- \"Maria Silva\" -> responsável, se estiver faltando responsável\n- \"hoje\" / \"amanhã\" / \"22/08\" -> data\n- \"pessoal\" / \"motivo pessoal\" / \"FACEPE\" / \"consulta\" / \"consulta médica\" / \"dentista\" / \"compromisso familiar\" / \"trabalho\" / \"viagem\" -> motivo\n- \"sim, autorizo\" / \"não autorizo\" -> decisão\n\nSe a autorização estiver em andamento e o usuário responder \"pessoal\", classifique OBRIGATORIAMENTE como AUTORIZACAO.\nSe a autorização estiver em andamento e o usuário responder uma única palavra como motivo, NÃO classifique como OUTRO.\n\nCONTINUIDADE DE CONSULTA\nSe a conversa anterior estiver fazendo uma CONSULTA, preserve CONSULTA quando a mensagem atual estiver resolvendo uma ambiguidade.\n- Se o sistema estiver aguardando uma turma, respostas como \"3 DS A\" ou \"2 ADM B\" devem ser CONSULTA.\n- Se o sistema tiver encontrado mais de um aluno e estiver aguardando o nome completo, respostas como \"João Silva\", \"João Santos\" ou outro nome de pessoa devem ser CONSULTA.\n- Se o sistema disser \"informe a turma ou o nome completo\", tanto uma turma válida quanto um nome completo devem ser CONSULTA.\n\nSEM CONTEXTO\nSe a conversa não tiver contexto suficiente:\n- \"oi\", \"bom dia\", \"como funciona?\", \"obrigado\" -> OUTRO\n- uma turma isolada, um nome isolado ou \"sim\" pode ser OUTRO se não houver contexto anterior suficiente.\n\nERROS DE DIGITAÇÃO\nInterprete pelo significado. Ignore acentos ausentes, letras maiúsculas/minúsculas, abreviações e pequenos erros de escrita.\n\nExemplos de AUTORIZACAO:\n- \"autorizo João a sair\"\n- \"quero autorizar maiccon\"\n- \"autorizasao para Pedro\"\n- \"Maria pode sair hoje\"\n- \"não autorizo João a sair\"\n- \"não libero Pedro\"\n\nExemplos de CONSULTA:\n- \"consulte o histórico de Maiccon\"\n- \"consuta o istorico de João\"\n- \"quero ver as saídas de Pedro\"\n- \"histórico Maria Silva\"\n\nAs turmas válidas são:\n1 ADM A, 1 ADM B, 1 DS A, 1 DS B,\n2 ADM A, 2 ADM B, 2 DS A, 2 DS B,\n3 ADM A, 3 ADM B, 3 DS A, 3 DS B.\n\nIMPORTANTE: responda SOMENTE com uma destas três palavras, sem pontuação e sem explicação:\nAUTORIZACAO\nCONSULTA\nOUTRO"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -1632,
+        2272
+      ],
+      "id": "d1de77ff-5aa4-4196-baf0-8fe765460401",
+      "name": "Identificar Intenção"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -1344,
+        2640
+      ],
+      "id": "0b912ab6-ae21-4a8c-a21c-13891f8b678a",
+      "name": "Modelo IA — Groq GPT-OSS"
+    },
+    {
+      "parameters": {
+        "jsCode": "const chatInput = String($('Receber Mensagem').item.json.chatInput ?? '').trim();\n\nconst normalizar = (texto) => String(texto ?? '')\n  .normalize('NFD')\n  .replace(/[\\u0300-\\u036f]/g, '')\n  .trim();\n\nconst msg = normalizar(chatInput).toLowerCase();\nconst raw = normalizar($json.output)\n  .replace(/```[a-z]*|```/gi, '')\n  .toUpperCase();\n\nlet intent = 'OUTRO';\n\nif (/\\bAUTORIZACAO\\b/.test(raw)) {\n  intent = 'AUTORIZACAO';\n} else if (/\\bCONSULTA\\b/.test(raw)) {\n  intent = 'CONSULTA';\n} else if (/\\bOUTRO\\b/.test(raw)) {\n  intent = 'OUTRO';\n}\n\n// Regras determinísticas para respostas curtas comuns de autorização.\n// Elas funcionam como uma camada de segurança caso a IA classifique uma\n// resposta como \"pessoal\" ou \"14:30\" incorretamente como OUTRO.\nconst consultaExplicita = /(historico|consultar|consulte|consulta de historico|ver (as )?saidas|saidas de|pesquisar historico|buscar historico)/i.test(msg);\nconst autorizacaoExplicita = /(autoriz|liber|pode sair|nao pode sair|nao libero|nao autor|permito|permissao para sair)/i.test(msg);\n\nconst pareceHorario = /^(?:[01]?\\d|2[0-3])\\s*(?::|h)\\s*[0-5]\\d$/.test(msg);\nconst pareceData = /^(?:0?[1-9]|[12]\\d|3[01])[\\/\\-](?:0?[1-9]|1[0-2])(?:[\\/\\-]\\d{2,4})?$/.test(msg) || /^(hoje|amanha)$/.test(msg);\n\nconst motivosComuns = /^(pessoal|motivo pessoal|facepe|consulta|consulta medica|medico|medica|dentista|exame|terapia|saude|doenca|compromisso|compromisso familiar|familiar|trabalho|viagem|documentos|assunto pessoal|emergencia|emergencia familiar)$/i;\nconst pareceMotivo = motivosComuns.test(msg);\n\nif (consultaExplicita) {\n  intent = 'CONSULTA';\n} else if (autorizacaoExplicita || pareceHorario || pareceData || pareceMotivo) {\n  intent = 'AUTORIZACAO';\n}\n\nreturn [\n  {\n    json: {\n      intent,\n      intent_original: $json.output ?? '',\n      chatInput,\n      classificacao_protegida: pareceHorario || pareceData || pareceMotivo\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1344,
+        2272
+      ],
+      "id": "6d7aa4aa-7c9b-453b-812a-7d768ec1e344",
+      "name": "Preparar Mensagem"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "AUTORIZACAO",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "744f0e02-2780-4c93-aee7-b7968cc60431"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "AUTORIZACAO"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "efc515f8-f5f4-402d-877a-b5d24897ffe4",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "CONSULTA",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "CONSULTA"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "04e17a69-48db-41c5-a43b-b26f307bf148",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "OUTRO",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "OUTRO"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -1152,
+        2272
+      ],
+      "id": "8fbaaa10-fa6b-4f09-99f4-6e37b536eb21",
+      "name": "Roteador: Autorização ou Consulta"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Receber Mensagem').item.json.chatInput }}",
+        "options": {
+          "systemMessage": "Você é o módulo de IA do AutorizaIA responsável por extrair dados de uma autorização de saída escolar.\n\nAnalise a mensagem atual E a memória da conversa. Retorne os campos:\n- nome_aluno\n- turma\n- responsavel\n- data_saida\n- horario_saida\n- motivo\n- status\n\nA data atual é: {{ $now.format('dd/MM/yyyy') }}\n\nVALORES DE STATUS\nUse exatamente um destes valores:\n- \"Autorizado\": quando o responsável indicar claramente que permite/libera/autoriza a saída. Expressões como \"autorizo\", \"pode sair\", \"libero\", \"quero autorizar\" e \"autorização para\" indicam autorização.\n- \"Negado\": quando o responsável indicar claramente que NÃO permite a saída, como \"não autorizo\", \"não pode sair\" ou \"não libero\".\n- \"Não informado\": quando ainda não for possível saber se houve autorização.\n\nREGRAS\n1. Nunca invente informações.\n2. Campo ausente = \"Não informado\".\n3. \"hoje\" = data atual.\n4. \"amanhã\" = dia seguinte.\n5. Data explícita deve sair como DD/MM/AAAA. Se o ano não for citado, use o ano atual.\n6. Horário deve sair como HH:MM.\n7. Preserve os dados válidos obtidos nas mensagens anteriores.\n8. Se o usuário corrigir explicitamente um dado, use a correção mais recente.\n9. Nunca troque um valor já conhecido por \"Não informado\" só porque a mensagem atual é curta.\n10. Não transforme uma negativa em autorização.\n\nTURMAS VÁLIDAS\n1 ADM A, 1 ADM B, 1 DS A, 1 DS B,\n2 ADM A, 2 ADM B, 2 DS A, 2 DS B,\n3 ADM A, 3 ADM B, 3 DS A, 3 DS B.\n\nADM = Administração\nDS = Desenvolvimento de Sistemas\n\nPadronize exemplos assim:\n\"primeiro administração A\" -> \"1 ADM A\"\n\"2º ADM B\" -> \"2 ADM B\"\n\"terceiro desenvolvimento de sistemas A\" -> \"3 DS A\"\n\"3dsa\" -> \"3 DS A\"\nSe a turma não estiver clara ou não estiver na lista, use \"Não informado\".\n\nCONTINUIDADE EM ETAPAS\nSe uma autorização estiver sendo preenchida aos poucos, use a memória para combinar a resposta atual com os dados anteriores.\n\nExemplo:\nMensagem 1: \"Quero autorizar Maiccon\"\n-> nome_aluno = \"Maiccon\", status = \"Autorizado\", demais ausentes.\nMensagem 2: \"3 DS A\"\n-> preserve Maiccon e Autorizado; preencha turma.\nMensagem 3: \"Rita Célia\"\n-> preserve os anteriores; preencha responsavel.\nMensagem 4: \"hoje\"\n-> preencha data_saida.\nMensagem 5: \"14:30\"\n-> preencha horario_saida.\nMensagem 6: \"FACEPE\"\n-> preencha motivo.\n\nRESPOSTAS CURTAS\nUse formato e contexto para identificar o campo:\n- \"16:40\" geralmente é horario_saida;\n- \"20/08\" geralmente é data_saida;\n- \"pessoal\", \"motivo pessoal\", \"consulta médica\", \"FACEPE\", \"compromisso familiar\", \"dentista\", \"trabalho\" geralmente são motivo;\n- um nome de pessoa, quando o sistema aguarda responsável, é responsavel;\n- uma turma válida é turma.\n\nREGRA ESPECIAL PARA MOTIVO CURTO\nSe a autorização em andamento já tiver nome, turma, responsável, data e horário, mas estiver faltando somente motivo, qualquer resposta curta plausível como \"pessoal\", \"facepe\", \"consulta\", \"dentista\", \"trabalho\" ou \"familiar\" deve preencher motivo. Preserve todos os outros campos e o status anterior.\n\nRETORNO\nRetorne SOMENTE JSON válido, sem markdown, comentários ou explicações, exatamente com estas chaves:\n{\n  \"nome_aluno\": \"\",\n  \"turma\": \"\",\n  \"responsavel\": \"\",\n  \"data_saida\": \"\",\n  \"horario_saida\": \"\",\n  \"motivo\": \"\",\n  \"status\": \"\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -880,
+        2160
+      ],
+      "id": "aabcc5da-0126-47cf-8925-8f08cf119494",
+      "name": "Extrair Dados da Autorização"
+    },
+    {
+      "parameters": {
+        "jsCode": "function parseSaidaIA(valor) {\n  if (valor && typeof valor === 'object') return valor;\n\n  const texto = String(valor ?? '')\n    .replace(/```json/gi, '')\n    .replace(/```/g, '')\n    .trim();\n\n  try {\n    return JSON.parse(texto);\n  } catch (e) {\n    const bloco = texto.match(/\\{[\\s\\S]*\\}/);\n    if (bloco) {\n      try { return JSON.parse(bloco[0]); } catch (_) {}\n    }\n    throw new Error('JSON inválido retornado pela IA');\n  }\n}\n\nfunction semAcentos(texto) {\n  return String(texto ?? '')\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '');\n}\n\nfunction ausente(valor) {\n  const v = semAcentos(valor).trim().toLowerCase();\n  return !v || v === 'nao informado' || v === 'null' || v === 'undefined';\n}\n\nfunction limpar(valor) {\n  return ausente(valor) ? 'Não informado' : String(valor).trim().replace(/\\s+/g, ' ');\n}\n\nfunction hojeRecife(offsetDias = 0) {\n  const partes = new Intl.DateTimeFormat('en-GB', {\n    timeZone: 'America/Recife',\n    day: '2-digit', month: '2-digit', year: 'numeric'\n  }).formatToParts(new Date());\n\n  const obj = Object.fromEntries(partes.filter(p => p.type !== 'literal').map(p => [p.type, p.value]));\n  const base = new Date(Date.UTC(Number(obj.year), Number(obj.month) - 1, Number(obj.day)));\n  base.setUTCDate(base.getUTCDate() + offsetDias);\n\n  return {\n    dia: String(base.getUTCDate()).padStart(2, '0'),\n    mes: String(base.getUTCMonth() + 1).padStart(2, '0'),\n    ano: String(base.getUTCFullYear())\n  };\n}\n\nfunction normalizarTurma(valor) {\n  if (ausente(valor)) return null;\n\n  let t = semAcentos(valor)\n    .toUpperCase()\n    .replace(/[º°ª]/g, '')\n    .replace(/[-_.]/g, ' ')\n    .replace(/\\bPRIMEIRO\\b/g, '1')\n    .replace(/\\bSEGUNDO\\b/g, '2')\n    .replace(/\\bTERCEIRO\\b/g, '3')\n    .replace(/\\bANO\\b/g, ' ')\n    .replace(/\\bDESENVOLVIMENTO\\s+DE\\s+SISTEMAS\\b/g, 'DS')\n    .replace(/\\bDESENVOLVIMENTO\\s+SISTEMAS\\b/g, 'DS')\n    .replace(/\\bADMINISTRACAO\\b/g, 'ADM')\n    .replace(/\\s+/g, ' ')\n    .trim();\n\n  const match = t.match(/^([123])\\s*(DS|ADM)\\s*([AB])$/);\n  if (!match) return null;\n  return `${match[1]} ${match[2]} ${match[3]}`;\n}\n\nfunction normalizarData(valor) {\n  if (ausente(valor)) return null;\n\n  const bruto = semAcentos(valor).trim().toLowerCase();\n  if (bruto === 'hoje') {\n    const d = hojeRecife(0);\n    return `${d.dia}/${d.mes}/${d.ano}`;\n  }\n  if (bruto === 'amanha') {\n    const d = hojeRecife(1);\n    return `${d.dia}/${d.mes}/${d.ano}`;\n  }\n\n  const atual = hojeRecife(0);\n  const m = bruto.replace(/[.\\-]/g, '/').match(/^(\\d{1,2})\\/(\\d{1,2})(?:\\/(\\d{2,4}))?$/);\n  if (!m) return null;\n\n  const dia = Number(m[1]);\n  const mes = Number(m[2]);\n  let ano = m[3] ? Number(m[3]) : Number(atual.ano);\n  if (ano < 100) ano += 2000;\n\n  const teste = new Date(Date.UTC(ano, mes - 1, dia));\n  if (\n    teste.getUTCFullYear() !== ano ||\n    teste.getUTCMonth() !== mes - 1 ||\n    teste.getUTCDate() !== dia\n  ) return null;\n\n  return `${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}/${ano}`;\n}\n\nfunction normalizarHorario(valor) {\n  if (ausente(valor)) return null;\n\n  let h = semAcentos(valor).trim().toLowerCase().replace(/\\s+/g, '');\n  h = h.replace(/h/g, ':').replace(/\\./g, ':').replace(/:+$/, '');\n\n  const m = h.match(/^(\\d{1,2})(?::(\\d{1,2}))?$/);\n  if (!m) return null;\n\n  const hora = Number(m[1]);\n  const minuto = m[2] === undefined ? 0 : Number(m[2]);\n  if (hora < 0 || hora > 23 || minuto < 0 || minuto > 59) return null;\n\n  return `${String(hora).padStart(2, '0')}:${String(minuto).padStart(2, '0')}`;\n}\n\nfunction normalizarStatus(valor) {\n  if (ausente(valor)) return 'Não informado';\n  const s = semAcentos(valor).trim().toLowerCase();\n\n  if (/nao\\s*(autoriz|liber|permit)|negad|nao pode/.test(s)) return 'Negado';\n  if (/autoriz|liberad|permitid|pode sair|^sim$/.test(s)) return 'Autorizado';\n  return 'Não informado';\n}\n\nlet dados;\nlet erroProcessamento = false;\nlet mensagemErro = '';\n\ntry {\n  dados = parseSaidaIA($json.output);\n} catch (e) {\n  erroProcessamento = true;\n  mensagemErro = e.message;\n  dados = {};\n}\n\nconst erros = [];\n\ndados.nome_aluno = limpar(dados.nome_aluno);\ndados.responsavel = limpar(dados.responsavel);\ndados.motivo = limpar(dados.motivo);\n\nif (ausente(dados.turma)) {\n  dados.turma = 'Não informado';\n} else {\n  const turma = normalizarTurma(dados.turma);\n  if (turma) dados.turma = turma;\n  else {\n    dados.turma = 'Não informado';\n    erros.push('turma_invalida');\n  }\n}\n\nif (ausente(dados.data_saida)) {\n  dados.data_saida = 'Não informado';\n} else {\n  const data = normalizarData(dados.data_saida);\n  if (data) dados.data_saida = data;\n  else {\n    dados.data_saida = 'Não informado';\n    erros.push('data_invalida');\n  }\n}\n\nif (ausente(dados.horario_saida)) {\n  dados.horario_saida = 'Não informado';\n} else {\n  const horario = normalizarHorario(dados.horario_saida);\n  if (horario) dados.horario_saida = horario;\n  else {\n    dados.horario_saida = 'Não informado';\n    erros.push('horario_invalido');\n  }\n}\n\ndados.status = normalizarStatus(dados.status);\n\nconst obrigatorios = [\n  'nome_aluno', 'turma', 'responsavel',\n  'data_saida', 'horario_saida', 'motivo'\n];\n\nconst camposCompletos = obrigatorios.every(c => dados[c] && dados[c] !== 'Não informado');\n\ndados.autorizacao_valida = camposCompletos && dados.status === 'Autorizado' && !erroProcessamento && erros.length === 0;\ndados.erros_validacao = erros;\ndados.erro_processamento = erroProcessamento;\ndados.mensagem_erro = mensagemErro;\n\ndados.data_registro = new Date().toLocaleString('pt-BR', {\n  timeZone: 'America/Recife'\n});\n\nreturn [{ json: dados }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        2160
+      ],
+      "id": "cba56183-a69c-4310-a0ee-877971b295d9",
+      "name": "Padronizar Dados da Autorização"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4e56e8bb-5241-416c-96f2-9bff5af578e2",
+              "leftValue": "={{ $json.nome_aluno }}",
+              "rightValue": "Não informado",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "fd97c225-601f-4136-918d-2f87ecd3b3a7",
+              "leftValue": "={{ $json.turma }}",
+              "rightValue": "Não informado",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "13cdd789-b10d-4345-96f3-6b81cb9b61fa",
+              "leftValue": "={{ $json.responsavel }}",
+              "rightValue": "Não informado",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "3d4d5567-eb8a-4b8c-9491-2792e31e8a80",
+              "leftValue": "={{ $json.data_saida }}",
+              "rightValue": "Não informado",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "0bfc5ec9-6ed2-4d35-a4de-74f3295f2fe8",
+              "leftValue": "={{ $json.motivo }}",
+              "rightValue": "Não informado",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "aa596c0d-fe0a-422a-ad1d-ee3370ef3365",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "Autorizado",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "35c2cfca-5956-4db3-b1b2-e193548a374f",
+              "leftValue": "={{ $json.data_registro }}",
+              "rightValue": "Não informado",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "74ac7692-96b7-4ec9-af9f-dd8ffa0a72c2",
+              "leftValue": "={{ $json.horario_saida }}",
+              "rightValue": "Não informado",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -336,
+        2160
+      ],
+      "id": "c1186ff0-a728-48aa-8076-e5a6d38e1420",
+      "name": "Validar Autorização"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "SEU_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "AutorizaIA - Registro de Saídas"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "nome_aluno": "={{ $json.nome_aluno }}",
+            "turma": "={{ $json.turma }}",
+            "responsavel": "={{ $json.responsavel }}",
+            "data_saida": "={{ $json.data_saida }}",
+            "horario_saida": "={{ $json.horario_saida }}",
+            "motivo": "={{ $json.motivo }}",
+            "status": "={{ $json.status }}",
+            "data_registro": "={{ $json.data_registro }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "nome_aluno",
+              "displayName": "nome_aluno",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "turma",
+              "displayName": "turma",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "responsavel",
+              "displayName": "responsavel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "data_saida",
+              "displayName": "data_saida",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "horario_saida",
+              "displayName": "horario_saida",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "motivo",
+              "displayName": "motivo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "data_registro",
+              "displayName": "data_registro",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -16,
+        2080
+      ],
+      "id": "df0efe9b-049e-4446-b7fb-22cbb1273457",
+      "name": "Registrar Saída na Planilha",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const dados = $input.first().json;\n\nconst mensagem =\n`AUTORIZAÇÃO REGISTRADA\n\nAluno: ${dados.nome_aluno || \"Não informado\"}\nTurma: ${dados.turma || \"Não informado\"}\nResponsável: ${dados.responsavel || \"Não informado\"}\nData da saída: ${dados.data_saida || \"Não informado\"}\nHorário: ${dados.horario_saida || \"Não informado\"}\nMotivo: ${dados.motivo || \"Não informado\"}\nStatus: ${dados.status || \"Autorizado\"}\n\nRegistro realizado com sucesso.`;\n\nreturn [\n  {\n    json: {\n      output: mensagem\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        2080
+      ],
+      "id": "9f1937b6-1940-498d-8c45-2aef4b384ffa",
+      "name": "Confirmar Autorização"
+    },
+    {
+      "parameters": {
+        "jsCode": "const dados = $input.first().json;\n\nif (dados.erro_processamento) {\n  return [{\n    json: {\n      ...dados,\n      campo_faltante: null,\n      output: 'Não consegui interpretar os dados da autorização com segurança. Por favor, envie novamente a autorização em uma frase mais clara.'\n    }\n  }];\n}\n\nif (dados.status === 'Negado') {\n  return [{\n    json: {\n      ...dados,\n      campo_faltante: null,\n      output: 'Entendi. A saída NÃO foi registrada porque a mensagem indica que o responsável não autorizou o aluno a sair.'\n    }\n  }];\n}\n\nconst erros = Array.isArray(dados.erros_validacao) ? dados.erros_validacao : [];\n\nif (erros.includes('turma_invalida')) {\n  return [{ json: { ...dados, campo_faltante: 'turma', output: 'A turma informada não é válida. Informe uma turma como 1 ADM A, 2 DS B ou 3 DS A.' } }];\n}\nif (erros.includes('data_invalida')) {\n  return [{ json: { ...dados, campo_faltante: 'data_saida', output: 'A data informada não é válida. Informe a data no formato DD/MM/AAAA, ou use “hoje” ou “amanhã”.' } }];\n}\nif (erros.includes('horario_invalido')) {\n  return [{ json: { ...dados, campo_faltante: 'horario_saida', output: 'O horário informado não é válido. Informe um horário entre 00:00 e 23:59, por exemplo 14:30.' } }];\n}\n\nconst campos = [\n  { campo: 'nome_aluno', pergunta: 'Qual é o nome completo do aluno?' },\n  { campo: 'turma', pergunta: `Qual é a turma de ${dados.nome_aluno && dados.nome_aluno !== 'Não informado' ? dados.nome_aluno : 'aluno'}?` },\n  { campo: 'responsavel', pergunta: 'Qual é o nome do responsável que está autorizando a saída?' },\n  { campo: 'data_saida', pergunta: 'Qual é a data da saída?' },\n  { campo: 'horario_saida', pergunta: 'Qual será o horário da saída?' },\n  { campo: 'motivo', pergunta: 'Qual é o motivo da saída?' }\n];\n\nconst faltando = campos.find(item => {\n  const valor = dados[item.campo];\n  const normalizado = String(valor ?? '')\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .trim()\n    .toLowerCase();\n  return !normalizado || normalizado === 'nao informado';\n});\n\nif (faltando) {\n  return [{\n    json: {\n      ...dados,\n      campo_faltante: faltando.campo,\n      output: faltando.pergunta\n    }\n  }];\n}\n\nif (dados.status !== 'Autorizado') {\n  return [{\n    json: {\n      ...dados,\n      campo_faltante: 'status',\n      output: `Os dados estão completos. Você confirma que autoriza ${dados.nome_aluno} a sair no dia ${dados.data_saida} às ${dados.horario_saida}?`\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ...dados,\n    campo_faltante: null,\n    output: 'Não foi possível concluir a autorização. Revise os dados e tente novamente.'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -16,
+        2272
+      ],
+      "id": "03fe6e94-c796-42d6-84cd-feedccf6558d",
+      "name": "Informar Dados Faltantes"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Receber Mensagem').item.json.chatInput }}",
+        "options": {
+          "systemMessage": "Você é o módulo de IA do AutorizaIA responsável por interpretar consultas ao histórico de saídas de alunos.\n\nExtraia:\n- nome_aluno\n- turma\n\nREGRAS\n1. Nunca invente informações.\n2. Se o nome não estiver disponível nem na mensagem atual nem na memória, use \"Não informado\".\n3. Se a turma não estiver disponível, use \"Não informado\".\n4. Use a memória da conversa para completar uma consulta iniciada anteriormente.\n5. Se o sistema pediu a turma e o usuário responder apenas \"3 DS A\", recupere da memória o nome do aluno da consulta anterior.\n6. Preserve o nome já conhecido quando a mensagem atual trouxer apenas a turma.\n7. Se o usuário corrigir claramente o nome ou a turma, use a informação mais recente.\n8. Se a resposta anterior do sistema informou que existem vários alunos com nome parecido e pediu a turma OU o nome completo:\n   - uma resposta contendo apenas uma turma deve preservar o nome parcial já consultado e preencher turma;\n   - uma resposta contendo apenas um nome completo deve substituir/refinar nome_aluno, preservando a turma anterior caso ela já tenha sido informada.\n9. Se o sistema pediu especificamente o nome completo para resolver dois alunos da mesma turma, trate a próxima resposta com nome de pessoa como nome_aluno.\n\nTURMAS VÁLIDAS\n1 ADM A, 1 ADM B, 1 DS A, 1 DS B,\n2 ADM A, 2 ADM B, 2 DS A, 2 DS B,\n3 ADM A, 3 ADM B, 3 DS A, 3 DS B.\n\nADM = Administração\nDS = Desenvolvimento de Sistemas\n\nPadronize:\n\"3º desenvolvimento de sistemas A\" -> \"3 DS A\"\n\"2º administração B\" -> \"2 ADM B\"\n\"3dsa\" -> \"3 DS A\"\n\nRetorne SOMENTE JSON válido, sem markdown ou explicações:\n{\n  \"nome_aluno\": \"\",\n  \"turma\": \"\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -880,
+        2432
+      ],
+      "id": "a6681c18-3f30-4e4d-bdc1-8a14bf290ca4",
+      "name": "Extrair Dados da Consulta"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        -784,
+        2640
+      ],
+      "id": "ae47b0b1-1b2b-41dc-aafa-418bafda7bbc",
+      "name": "Memória da Consulta"
+    },
+    {
+      "parameters": {
+        "jsCode": "function parseSaidaIA(valor) {\n  if (valor && typeof valor === 'object') return valor;\n  const texto = String(valor ?? '')\n    .replace(/```json/gi, '')\n    .replace(/```/g, '')\n    .trim();\n  try {\n    return JSON.parse(texto);\n  } catch (e) {\n    const bloco = texto.match(/\\{[\\s\\S]*\\}/);\n    if (bloco) {\n      try { return JSON.parse(bloco[0]); } catch (_) {}\n    }\n    throw new Error('JSON inválido retornado pela IA');\n  }\n}\n\nfunction semAcentos(texto) {\n  return String(texto ?? '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n}\n\nfunction ausente(valor) {\n  const v = semAcentos(valor).trim().toLowerCase();\n  return !v || v === 'nao informado' || v === 'null' || v === 'undefined';\n}\n\nfunction titulo(texto) {\n  return String(texto)\n    .trim()\n    .toLowerCase()\n    .replace(/(^|\\s)\\S/g, letra => letra.toUpperCase())\n    .replace(/\\s+/g, ' ');\n}\n\nfunction normalizarTurma(valor) {\n  if (ausente(valor)) return null;\n  let t = semAcentos(valor)\n    .toUpperCase()\n    .replace(/[º°ª]/g, '')\n    .replace(/[-_.]/g, ' ')\n    .replace(/\\bPRIMEIRO\\b/g, '1')\n    .replace(/\\bSEGUNDO\\b/g, '2')\n    .replace(/\\bTERCEIRO\\b/g, '3')\n    .replace(/\\bANO\\b/g, ' ')\n    .replace(/\\bDESENVOLVIMENTO\\s+DE\\s+SISTEMAS\\b/g, 'DS')\n    .replace(/\\bDESENVOLVIMENTO\\s+SISTEMAS\\b/g, 'DS')\n    .replace(/\\bADMINISTRACAO\\b/g, 'ADM')\n    .replace(/\\s+/g, ' ')\n    .trim();\n  const m = t.match(/^([123])\\s*(DS|ADM)\\s*([AB])$/);\n  return m ? `${m[1]} ${m[2]} ${m[3]}` : null;\n}\n\nlet dados;\nlet erroProcessamento = false;\n\ntry {\n  dados = parseSaidaIA($json.output);\n} catch (e) {\n  dados = {};\n  erroProcessamento = true;\n}\n\ndados.nome_aluno = ausente(dados.nome_aluno) ? 'Não informado' : titulo(dados.nome_aluno);\n\nif (ausente(dados.turma)) {\n  dados.turma = 'Não informado';\n} else {\n  const turma = normalizarTurma(dados.turma);\n  dados.turma = turma || 'Não informado';\n  if (!turma) dados.turma_invalida = true;\n}\n\ndados.erro_processamento = erroProcessamento;\n\nreturn [{ json: dados }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -576,
+        2432
+      ],
+      "id": "8f1977b1-fd0a-422b-ba21-7f8359f84522",
+      "name": "Padronizar Dados da Consulta"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "96437802-e38f-4ab1-b8c1-38bb5e8068da",
+              "leftValue": "={{ $json.turma }}",
+              "rightValue": "Não informado",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -176,
+        2528
+      ],
+      "id": "9105c71f-a273-4c0a-963c-836846a01f8c",
+      "name": "Turma Foi Informada?"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "SEU_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "AutorizaIA - Registro de Saídas"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        64,
+        2480
+      ],
+      "id": "57c917d1-78c8-417b-99ee-e2631447660e",
+      "name": "Buscar Histórico por Nome e Turma",
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "SEU_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "AutorizaIA - Registro de Saídas"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Página1"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        64,
+        2720
+      ],
+      "id": "fe55e02b-95d8-49fa-aec2-0c91dc2e0c45",
+      "name": "Buscar Histórico por Nome",
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const entrada = $input.all();\n\n// Se o nó anterior já produziu uma resposta final (nenhum resultado,\n// consulta ambígua etc.), preserve essa mensagem.\nif (\n  entrada.length === 1 &&\n  entrada[0].json &&\n  entrada[0].json.finalizar_consulta &&\n  entrada[0].json.output\n) {\n  return [{\n    json: {\n      ...entrada[0].json,\n      output: entrada[0].json.output\n    }\n  }];\n}\n\nlet registros = [];\n\n// Aceita registros separados ou vindos do nó \"Analisar Turmas\".\nif (\n  entrada.length === 1 &&\n  Array.isArray(entrada[0].json.registros)\n) {\n  registros = entrada[0].json.registros;\n} else {\n  registros = entrada\n    .map(item => item.json)\n    .filter(r => r && r.nome_aluno && r.data_saida);\n}\n\n// Sem resultados.\nif (registros.length === 0) {\n  return [{\n    json: {\n      output:\n`**AUTORIZAIA**\n\n### HISTÓRICO DE SAÍDAS\n\nNenhum registro foi encontrado para o aluno informado.\n\nVerifique o nome e a turma e tente novamente.`\n    }\n  }];\n}\n\n// Remove registros idênticos duplicados apenas da exibição.\nconst vistos = new Set();\nregistros = registros.filter(r => {\n  const chave = [\n    r.nome_aluno,\n    r.turma,\n    r.data_saida,\n    r.horario_saida,\n    r.responsavel,\n    r.motivo,\n    r.status\n  ].map(v => String(v ?? '').trim()).join('|');\n\n  if (vistos.has(chave)) return false;\n  vistos.add(chave);\n  return true;\n});\n\nfunction limpar(valor) {\n  if (valor === undefined || valor === null || String(valor).trim() === '') {\n    return 'Não informado';\n  }\n\n  // Evita quebrar a tabela Markdown caso algum valor contenha \"|\".\n  return String(valor)\n    .trim()\n    .replace(/\\|/g, '\\\\|');\n}\n\nfunction primeiraMaiuscula(valor) {\n  const texto = limpar(valor);\n  if (texto === 'Não informado') return texto;\n  return texto.charAt(0).toUpperCase() + texto.slice(1);\n}\n\nconst nome = limpar(registros[0].nome_aluno);\nconst turmas = [...new Set(\n  registros\n    .map(r => limpar(r.turma))\n    .filter(t => t !== 'Não informado')\n)];\n\nconst turmaCabecalho = turmas.length === 0\n  ? 'Não informado'\n  : turmas.join(', ');\n\nlet mensagem =\n`**AUTORIZAIA**\n\n### HISTÓRICO DE SAÍDAS\n\n| Informação | Valor |\n| :--- | :--- |\n| Aluno | ${nome} |\n| Turma | ${turmaCabecalho} |\n| Registros encontrados | ${registros.length} |`;\n\nregistros.forEach((r, index) => {\n  const numero = String(index + 1).padStart(2, '0');\n\n  mensagem += `\n\n### REGISTRO ${numero}\n\n| Campo | Valor |\n| :--- | :--- |\n| Data | ${limpar(r.data_saida)} |\n| Horário | ${limpar(r.horario_saida)} |\n| Turma | ${limpar(r.turma)} |\n| Responsável | ${limpar(r.responsavel)} |\n| Motivo | ${primeiraMaiuscula(r.motivo)} |\n| Status | ${limpar(r.status)} |`;\n});\n\nmensagem += `\n\n---\n\nConsulta concluída pelo **AutorizaIA**.`;\n\nreturn [{\n  json: {\n    output: mensagem\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        912,
+        2800
+      ],
+      "id": "8836747c-6e02-4b29-9da6-623572c1aff0",
+      "name": "Montar Histórico"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        -784,
+        2320
+      ],
+      "id": "b1e17e49-fa71-4826-91f0-c3b4d49b6a6a",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        -1408,
+        2432
+      ],
+      "id": "df26ccc5-908f-421e-abaf-02ed42c20751",
+      "name": "Simple Memory1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const registros = $input.all().filter(item => item.json && item.json.nome_aluno);\nconst consulta = $('Padronizar Dados da Consulta').first().json;\n\nfunction normalizar(texto) {\n  return String(texto || '')\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .toLowerCase()\n    .replace(/[^a-z0-9]/g, '');\n}\n\nfunction limparMarkdown(valor) {\n  return String(valor ?? '')\n    .trim()\n    .replace(/\\|/g, '\\\\|');\n}\n\nconst nomeBuscado = normalizar(consulta.nome_aluno);\nconst turmaBuscada = normalizar(consulta.turma);\n\nlet encontrados = registros.filter(item => {\n  const nome = normalizar(item.json.nome_aluno);\n  const turma = normalizar(item.json.turma);\n\n  const nomeCombina =\n    nome.includes(nomeBuscado) ||\n    nomeBuscado.includes(nome);\n\n  return nomeCombina && turma === turmaBuscada;\n});\n\nif (encontrados.length === 0) {\n  return [{\n    json: {\n      tipo_resultado: 'nenhum',\n      finalizar_consulta: true,\n      output:\n`**AUTORIZAIA**\n\n### HISTÓRICO DE SAÍDAS\n\nNenhum registro foi encontrado para **${limparMarkdown(consulta.nome_aluno)}** na turma **${limparMarkdown(consulta.turma)}**.\n\nVerifique os dados e tente novamente.`\n    }\n  }];\n}\n\n// Correspondência exata tem prioridade.\nconst exatos = encontrados.filter(\n  item => normalizar(item.json.nome_aluno) === nomeBuscado\n);\n\nif (exatos.length > 0) {\n  encontrados = exatos;\n}\n\n// Descobre quantas pessoas diferentes ainda correspondem.\nconst pessoas = new Map();\n\nfor (const item of encontrados) {\n  const nomeOriginal = String(item.json.nome_aluno || '').trim();\n  const chave = normalizar(nomeOriginal);\n\n  if (!pessoas.has(chave)) {\n    pessoas.set(chave, {\n      nome: nomeOriginal,\n      registros: []\n    });\n  }\n\n  pessoas.get(chave).registros.push(item);\n}\n\nif (pessoas.size > 1) {\n  const nomes = [...pessoas.values()]\n    .map(p => p.nome)\n    .sort((a, b) => a.localeCompare(b, 'pt-BR'));\n\n  let mensagem =\n`**AUTORIZAIA**\n\n### CONSULTA AMBÍGUA\n\nEncontrei mais de um aluno correspondente a **${limparMarkdown(consulta.nome_aluno)}** na turma **${limparMarkdown(consulta.turma)}**.\n\n| Aluno | Turma |\n|---|---|`;\n\n  for (const nome of nomes) {\n    mensagem += `\\n| ${limparMarkdown(nome)} | ${limparMarkdown(consulta.turma)} |`;\n  }\n\n  mensagem += `\n\nInforme **o nome completo** do aluno que deseja consultar.`;\n\n  return [{\n    json: {\n      tipo_resultado: 'ambiguo_mesma_turma',\n      finalizar_consulta: true,\n      nomes,\n      turma: consulta.turma,\n      output: mensagem\n    }\n  }];\n}\n\n// Uma única pessoa: retorna todos os registros dela.\nreturn [...pessoas.values()][0].registros;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        272,
+        2480
+      ],
+      "id": "1b359437-67fe-4a1a-8025-e792817a747a",
+      "name": "Filtrar Nome e Turma"
+    },
+    {
+      "parameters": {
+        "jsCode": "const consulta = $('Padronizar Dados da Consulta').first().json;\nconst registros = $input.all().filter(item => item.json && item.json.nome_aluno);\n\nfunction normalizar(texto) {\n  return String(texto || '')\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .toLowerCase()\n    .replace(/[^a-z0-9]/g, '');\n}\n\nfunction limparMarkdown(valor) {\n  return String(valor ?? '')\n    .trim()\n    .replace(/\\|/g, '\\\\|');\n}\n\nconst termo = normalizar(consulta.nome_aluno);\n\nlet encontrados = registros.filter(item => {\n  const nome = normalizar(item.json.nome_aluno);\n  return nome.includes(termo) || termo.includes(nome);\n});\n\nif (encontrados.length === 0) {\n  return [{\n    json: {\n      tipo_resultado: 'nenhum',\n      finalizar_consulta: true,\n      output:\n`**AUTORIZAIA**\n\n### HISTÓRICO DE SAÍDAS\n\nNenhum registro foi encontrado para o aluno informado.\n\nVerifique o nome e tente novamente.`\n    }\n  }];\n}\n\n// Se houver correspondência exata, ela tem prioridade sobre nomes apenas parecidos.\nconst exatos = encontrados.filter(\n  item => normalizar(item.json.nome_aluno) === termo\n);\n\nif (exatos.length > 0) {\n  encontrados = exatos;\n}\n\n// Agrupa cada pessoa por nome normalizado e reúne as turmas em que ela aparece.\nconst pessoas = new Map();\n\nfor (const item of encontrados) {\n  const nomeOriginal = String(item.json.nome_aluno || '').trim();\n  const chave = normalizar(nomeOriginal);\n  const turma = String(item.json.turma || 'Não informado').trim().toUpperCase();\n\n  if (!pessoas.has(chave)) {\n    pessoas.set(chave, {\n      nome: nomeOriginal,\n      turmas: new Set(),\n      registros: []\n    });\n  }\n\n  pessoas.get(chave).turmas.add(turma);\n  pessoas.get(chave).registros.push(item);\n}\n\n// Apenas uma pessoa corresponde ao nome parcial.\n// Mantemos somente os registros dela e seguimos para a análise de turmas.\nif (pessoas.size === 1) {\n  const pessoa = [...pessoas.values()][0];\n  return pessoa.registros;\n}\n\n// Mais de uma pessoa corresponde ao nome digitado.\nconst candidatos = [...pessoas.values()]\n  .map(p => ({\n    nome: p.nome,\n    turmas: [...p.turmas].filter(Boolean)\n  }))\n  .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));\n\nconst todasTurmas = new Set(\n  candidatos.flatMap(c => c.turmas)\n);\n\nlet tabela =\n`**AUTORIZAIA**\n\n### CONSULTA AMBÍGUA\n\nForam encontrados mais de um aluno correspondente a **${limparMarkdown(consulta.nome_aluno)}**.\n\n| Aluno | Turma |\n|---|---|`;\n\nfor (const c of candidatos) {\n  tabela += `\\n| ${limparMarkdown(c.nome)} | ${c.turmas.map(limparMarkdown).join(', ')} |`;\n}\n\nif (todasTurmas.size > 1) {\n  tabela += `\n\nInforme **a turma** ou **o nome completo** do aluno que deseja consultar.`;\n} else {\n  tabela += `\n\nOs alunos encontrados pertencem à mesma turma. Informe **o nome completo** do aluno que deseja consultar.`;\n}\n\nreturn [{\n  json: {\n    tipo_resultado: todasTurmas.size > 1\n      ? 'ambiguo_nome_turmas_diferentes'\n      : 'ambiguo_nome_mesma_turma',\n    finalizar_consulta: true,\n    consulta_original: consulta.nome_aluno,\n    candidatos: candidatos.map(c => ({\n      nome: c.nome,\n      turmas: c.turmas\n    })),\n    output: tabela\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        272,
+        2720
+      ],
+      "id": "f1e00f89-ba01-4a63-9c93-f8df85971848",
+      "name": "Filtrar Nome Parcial"
+    },
+    {
+      "parameters": {
+        "jsCode": "const entrada = $input.all();\n\n// Se o nó anterior já produziu uma resposta final (nenhum resultado,\n// consulta ambígua etc.), preserve essa mensagem.\nif (\n  entrada.length === 1 &&\n  entrada[0].json &&\n  entrada[0].json.finalizar_consulta &&\n  entrada[0].json.output\n) {\n  return [{\n    json: {\n      ...entrada[0].json,\n      output: entrada[0].json.output\n    }\n  }];\n}\n\nlet registros = [];\n\n// Aceita registros separados ou vindos do nó \"Analisar Turmas\".\nif (\n  entrada.length === 1 &&\n  Array.isArray(entrada[0].json.registros)\n) {\n  registros = entrada[0].json.registros;\n} else {\n  registros = entrada\n    .map(item => item.json)\n    .filter(r => r && r.nome_aluno && r.data_saida);\n}\n\n// Sem resultados.\nif (registros.length === 0) {\n  return [{\n    json: {\n      output:\n`**AUTORIZAIA**\n\n### HISTÓRICO DE SAÍDAS\n\nNenhum registro foi encontrado para o aluno informado.\n\nVerifique o nome e a turma e tente novamente.`\n    }\n  }];\n}\n\n// Remove registros idênticos duplicados apenas da exibição.\nconst vistos = new Set();\nregistros = registros.filter(r => {\n  const chave = [\n    r.nome_aluno,\n    r.turma,\n    r.data_saida,\n    r.horario_saida,\n    r.responsavel,\n    r.motivo,\n    r.status\n  ].map(v => String(v ?? '').trim()).join('|');\n\n  if (vistos.has(chave)) return false;\n  vistos.add(chave);\n  return true;\n});\n\nfunction limpar(valor) {\n  if (valor === undefined || valor === null || String(valor).trim() === '') {\n    return 'Não informado';\n  }\n\n  // Evita quebrar a tabela Markdown caso algum valor contenha \"|\".\n  return String(valor)\n    .trim()\n    .replace(/\\|/g, '\\\\|');\n}\n\nfunction primeiraMaiuscula(valor) {\n  const texto = limpar(valor);\n  if (texto === 'Não informado') return texto;\n  return texto.charAt(0).toUpperCase() + texto.slice(1);\n}\n\nconst nome = limpar(registros[0].nome_aluno);\nconst turmas = [...new Set(\n  registros\n    .map(r => limpar(r.turma))\n    .filter(t => t !== 'Não informado')\n)];\n\nconst turmaCabecalho = turmas.length === 0\n  ? 'Não informado'\n  : turmas.join(', ');\n\nlet mensagem =\n`**AUTORIZAIA**\n\n### HISTÓRICO DE SAÍDAS\n\n| Informação | Valor |\n| :--- | :--- |\n| Aluno | ${nome} |\n| Turma | ${turmaCabecalho} |\n| Registros encontrados | ${registros.length} |`;\n\nregistros.forEach((r, index) => {\n  const numero = String(index + 1).padStart(2, '0');\n\n  mensagem += `\n\n### REGISTRO ${numero}\n\n| Campo | Valor |\n| :--- | :--- |\n| Data | ${limpar(r.data_saida)} |\n| Horário | ${limpar(r.horario_saida)} |\n| Turma | ${limpar(r.turma)} |\n| Responsável | ${limpar(r.responsavel)} |\n| Motivo | ${primeiraMaiuscula(r.motivo)} |\n| Status | ${limpar(r.status)} |`;\n});\n\nmensagem += `\n\n---\n\nConsulta concluída pelo **AutorizaIA**.`;\n\nreturn [{\n  json: {\n    output: mensagem\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        2480
+      ],
+      "id": "6bb74686-9e64-4b1e-9220-406503e53fd6",
+      "name": "Montar Histórico1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const itens = $input.all();\n\nif (itens.length === 1 && itens[0].json && itens[0].json.finalizar_consulta) {\n  return [{\n    json: {\n      ...itens[0].json,\n      quantidade_turmas: 0,\n      turmas: [],\n      registros: []\n    }\n  }];\n}\n\nconst registros = itens\n  .map(item => item.json)\n  .filter(r => r && r.nome_aluno && r.data_saida);\n\nif (registros.length === 0) {\n  return [{\n    json: {\n      finalizar_consulta: true,\n      quantidade_turmas: 0,\n      turmas: [],\n      registros: [],\n      output: '🔎 Nenhum registro de saída foi encontrado para este aluno.'\n    }\n  }];\n}\n\nconst turmas = [...new Set(\n  registros\n    .map(r => String(r.turma || '').trim().toUpperCase())\n    .filter(Boolean)\n)];\n\nreturn [{\n  json: {\n    finalizar_consulta: false,\n    quantidade_turmas: turmas.length,\n    turmas,\n    nome_aluno: registros[0].nome_aluno,\n    registros\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        2720
+      ],
+      "id": "9b08bdaa-994a-4203-b0d7-f3531907c79e",
+      "name": "Analisar Turmas"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1431e4a9-3052-47c6-a181-91dca78343ae",
+              "leftValue": "={{ $json.quantidade_turmas }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        688,
+        2720
+      ],
+      "id": "ba1c5fe5-5a8c-4f85-9cc3-c66fe282e50f",
+      "name": "Mais de Uma Turma?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const dados = $input.first().json;\n\nreturn [{\n  json: {\n    output: `🔎 Encontrei registros de ${dados.nome_aluno} em mais de uma turma:\n\n🏫 ${dados.turmas.join(\"\\n🏫 \")}\n\nPor favor, informe a turma que deseja consultar.`\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        912,
+        2640
+      ],
+      "id": "9ff05714-90f0-4287-a907-afa3d69530f0",
+      "name": "Solicitar Turma"
+    },
+    {
+      "parameters": {
+        "jsCode": "const mensagem = String($('Receber Mensagem').item.json.chatInput || '').trim();\n\nreturn [{\n  json: {\n    output: `Olá! Eu sou o AutorizaIA. Posso ajudar com duas funções:\\n\\n1. Registrar uma autorização de saída.\\nExemplo: “Autorizo João Silva, 3 DS A, a sair hoje às 14:30 para consulta médica. Responsável: Maria Silva.”\\n\\n2. Consultar o histórico de saídas de um aluno.\\nExemplo: “Consulte o histórico de João Silva.”\\n\\nEnvie uma dessas solicitações para continuar.`\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -880,
+        1920
+      ],
+      "id": "ca7036d9-3409-499b-83a3-250e3439490b",
+      "name": "Orientar Usuário"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e0398eb5-b455-4f59-80aa-6d6f5c28e29c",
+              "leftValue": "={{ $json.nome_aluno }}",
+              "rightValue": "Não informado",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -400,
+        2432
+      ],
+      "id": "8e36504a-701b-4ac5-9771-06cbd52d82db",
+      "name": "Nome Foi Informado?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const dados = $input.first().json;\n\nlet output = 'Para consultar o histórico, informe o nome do aluno.';\nif (dados.turma && dados.turma !== 'Não informado') {\n  output = `Qual é o nome do aluno da turma ${dados.turma} que você deseja consultar?`;\n}\nif (dados.erro_processamento) {\n  output = 'Não consegui identificar o nome do aluno. Informe o nome do aluno que deseja consultar.';\n}\n\nreturn [{ json: { ...dados, output } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        2336
+      ],
+      "id": "5d820b33-07f0-451c-b1af-af938b8e0d32",
+      "name": "Solicitar Nome do Aluno"
+    },
+    {
+      "parameters": {
+        "jsCode": "const erro = $input.first().json;\n\nreturn [{\n  json: {\n    output: '⚠️ Não foi possível registrar a autorização na planilha agora. Os dados NÃO foram confirmados como registrados. Tente novamente em alguns instantes ou verifique a conexão com o Google Sheets.',\n    detalhe_erro: erro?.error?.message || erro?.message || 'Falha na integração com Google Sheets'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        2224
+      ],
+      "id": "ff5e13ae-aa63-420b-9381-5eec5d228242",
+      "name": "Erro ao Registrar na Planilha"
+    },
+    {
+      "parameters": {
+        "jsCode": "const erro = $input.first().json;\n\nreturn [{\n  json: {\n    output: '⚠️ Não foi possível consultar o histórico agora. Tente novamente em alguns instantes ou verifique a conexão com o Google Sheets.',\n    detalhe_erro: erro?.error?.message || erro?.message || 'Falha na integração com Google Sheets'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        2912
+      ],
+      "id": "6343ef9f-3856-47fb-bcb6-1b77cce6772b",
+      "name": "Erro ao Consultar Planilha"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Receber Mensagem": {
+      "main": [
+        [
+          {
+            "node": "Identificar Intenção",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Identificar Intenção": {
+      "main": [
+        [
+          {
+            "node": "Preparar Mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Modelo IA — Groq GPT-OSS": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extrair Dados da Autorização",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Identificar Intenção",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Extrair Dados da Consulta",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Mensagem": {
+      "main": [
+        [
+          {
+            "node": "Roteador: Autorização ou Consulta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Roteador: Autorização ou Consulta": {
+      "main": [
+        [
+          {
+            "node": "Extrair Dados da Autorização",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extrair Dados da Consulta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Orientar Usuário",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrair Dados da Autorização": {
+      "main": [
+        [
+          {
+            "node": "Padronizar Dados da Autorização",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Padronizar Dados da Autorização": {
+      "main": [
+        [
+          {
+            "node": "Validar Autorização",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar Autorização": {
+      "main": [
+        [
+          {
+            "node": "Registrar Saída na Planilha",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Informar Dados Faltantes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Saída na Planilha": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Autorização",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Erro ao Registrar na Planilha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrair Dados da Consulta": {
+      "main": [
+        [
+          {
+            "node": "Padronizar Dados da Consulta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memória da Consulta": {
+      "ai_memory": [
+        [
+          {
+            "node": "Extrair Dados da Consulta",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Padronizar Dados da Consulta": {
+      "main": [
+        [
+          {
+            "node": "Nome Foi Informado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Turma Foi Informada?": {
+      "main": [
+        [
+          {
+            "node": "Buscar Histórico por Nome e Turma",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Buscar Histórico por Nome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Histórico por Nome e Turma": {
+      "main": [
+        [
+          {
+            "node": "Filtrar Nome e Turma",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Erro ao Consultar Planilha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Histórico por Nome": {
+      "main": [
+        [
+          {
+            "node": "Filtrar Nome Parcial",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Erro ao Consultar Planilha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Extrair Dados da Autorização",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "Identificar Intenção",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar Nome e Turma": {
+      "main": [
+        [
+          {
+            "node": "Montar Histórico1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar Nome Parcial": {
+      "main": [
+        [
+          {
+            "node": "Analisar Turmas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analisar Turmas": {
+      "main": [
+        [
+          {
+            "node": "Mais de Uma Turma?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mais de Uma Turma?": {
+      "main": [
+        [
+          {
+            "node": "Solicitar Turma",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Montar Histórico",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nome Foi Informado?": {
+      "main": [
+        [
+          {
+            "node": "Turma Foi Informada?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Solicitar Nome do Aluno",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
