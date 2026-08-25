@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutorizaIA Família</title>
+  <style>
+    html,body{margin:0;min-height:100%;background:#07131c;color:#eaf2f6;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+    .loading{min-height:100vh;display:grid;place-items:center;text-align:center;padding:24px}
+    .loading b{font-size:22px}.loading p{color:#8fa3b7}
+  </style>
+</head>
+<body>
+  <div class="loading">
+    <div>
+      <b>AutorizaIA Família</b>
+      <p>Carregando formulário...</p>
+    </div>
+  </div>
+
+  <script>
+  (async () => {
+    try {
+      const response = await fetch("./AutorizaIA/frontend/familia.html", { cache: "no-store" });
+      if (!response.ok) throw new Error("Não foi possível carregar o formulário.");
+      let html = await response.text();
+
+      // Ativa o webhook da instância n8n usada na demonstração.
+      html = html.replaceAll("SEU_SUBDOMINIO", "richardxssj");
+
+      document.open();
+      document.write(html);
+      document.close();
+    } catch (error) {
+      document.body.innerHTML = `
+        <div class="loading">
+          <div>
+            <b>AutorizaIA Família</b>
+            <p>Não foi possível carregar a demonstração.</p>
+          </div>
+        </div>`;
+      console.error(error);
+    }
+  })();
+  </script>
+</body>
+</html>
